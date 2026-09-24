@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pref_dual_screen_key" translatable="false">dualScreen</string>
+    <string name="pref_dual_screen_answer_key" translatable="false">dualScreenAnswer</string>
+    <string name="pref_dual_screen_deck_picker_key" translatable="false">dualScreenDeckPicker</string>
+
+    <string name="pref_dual_screen_swapped_key" translatable="false">dualScreenSwapped</string>
+
+    <string name="dual_screen_more">More actions</string>
+    <string name="dual_screen_swap">Swap screens</string>
+    <string name="dual_screen_space">Space</string>
+    <string name="dual_screen_backspace">Backspace</string>
+    <string name="dual_screen_shift">Shift</string>
+    <string name="dual_screen_symbols" translatable="false">\?123</string>
+    <string name="dual_screen_controls">Controller</string>
+    <string name="dual_screen_button_a" translatable="false">A</string>
+    <string name="dual_screen_button_b" translatable="false">B</string>
+    <string name="dual_screen_button_x" translatable="false">X</string>
+    <string name="dual_screen_button_y" translatable="false">Y</string>
+    <string name="dual_screen_button_dpad" translatable="false">✚</string>
+    <string name="dual_screen_guide_a">Show answer, then Good</string>
+    <string name="dual_screen_guide_dpad">Move the highlight across both screens</string>
+
+    <string name="pref_cat_dual_screen" maxLength="41">Dual screen</string>
+    <string name="pref_dual_screen" maxLength="41">Use second screen</string>
+    <string name="pref_dual_screen_summ">Show study controls on a second screen, such as the bottom screen of the AYN Thor</string>
+    <string name="pref_dual_screen_answer" maxLength="41">Answer on second screen</string>
+    <string name="pref_dual_screen_answer_summ">Keep the question on the main screen and show the answer on the second screen</string>
+    <string name="pref_dual_screen_deck_picker" maxLength="41">Deck list panel</string>
+    <string name="pref_dual_screen_deck_picker_summ">Show the selected deck and shortcuts on the second screen while browsing decks</string>
+
+    <dimen name="dualscreen_header_padding">8dp</dimen>
+    <dimen name="dualscreen_action_padding">6dp</dimen>
+    <dimen name="dualscreen_action_text">13sp</dimen>
+    <dimen name="dualscreen_title_text">18sp</dimen>
+    <dimen name="dualscreen_body_text">13sp</dimen>
+    <dimen name="dualscreen_strip_height">88dp</dimen>
+
+    <style name="DualScreenAction">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:drawablePadding">4dp</item>
+        <item name="android:paddingTop">@dimen/dualscreen_action_padding</item>
+        <item name="android:paddingBottom">@dimen/dualscreen_action_padding</item>
+        <item name="android:drawableTint">?android:attr/textColorPrimary</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">@dimen/dualscreen_action_text</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
+    <style name="DualScreenDockButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+    </style>
+
+    <style name="DualScreenChipButton">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:tint">?android:attr/textColorPrimary</item>
+    </style>
+
+    <style name="DualScreenTile">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">false</item>
+    </style>
+
+    <style name="DualScreenHint">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_gravity">top|end</item>
+        <item name="android:layout_margin">8dp</item>
+        <item name="android:background">@drawable/dualscreen_pill</item>
+        <item name="android:backgroundTint">#73000000</item>
+        <item name="android:minWidth">28dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
+    <style name="DualScreenMenuItem">
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:drawablePadding">16dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="DualScreenKeyRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="DualScreenKey">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_margin">3dp</item>
+        <item name="android:background">@drawable/dualscreen_key_background</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">false</item>
+        <item name="android:gravity">center</item>
+        <item name="android:scaleType">center</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
+    <style name="DualScreenGuideRow">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="DualScreenGuideBadge">
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:background">@drawable/dualscreen_pill</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="DualScreenGuideLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">14dp</item>
+        <item name="android:textSize">@dimen/dualscreen_body_text</item>
+    </style>
+
+    <style name="DualScreenPillText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

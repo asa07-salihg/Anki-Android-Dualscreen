@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<level-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:maxLevel="0">
+        <vector
+            android:width="24dp"
+            android:height="24dp"
+            android:tint="?attr/colorControlNormal"
+            android:viewportWidth="24"
+            android:viewportHeight="24">
+            <path
+                android:fillColor="@android:color/white"
+                android:fillType="evenOdd"
+                android:pathData="M12,4L3,13h5v7h8v-7h5L12,4zM14,11v7h-4v-7H7.83L12,6.83L16.17,11H14z" />
+        </vector>
+    </item>
+    <item android:maxLevel="1">
+        <vector
+            android:width="24dp"
+            android:height="24dp"
+            android:tint="?attr/colorControlNormal"
+            android:viewportWidth="24"
+            android:viewportHeight="24">
+            <path
+                android:fillColor="@android:color/white"
+                android:pathData="M12,4L3,13h5v7h8v-7h5z" />
+        </vector>
+    </item>
+</level-list>

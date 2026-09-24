@@ -94,7 +94,7 @@ enum class ViewerCommand : MappableAction<ReviewerBinding> {
             return when (this) {
                 ANSWER_AGAIN ->
                     listOf(
-                        keyCode(KeyEvent.KEYCODE_BUTTON_Y, CardSide.ANSWER),
+                        keyCode(KeyEvent.KEYCODE_BUTTON_B, CardSide.ANSWER),
                         keyCode(KeyEvent.KEYCODE_1, CardSide.ANSWER),
                         keyCode(KeyEvent.KEYCODE_NUMPAD_1, CardSide.ANSWER),
                     )
@@ -106,7 +106,7 @@ enum class ViewerCommand : MappableAction<ReviewerBinding> {
                     )
                 ANSWER_GOOD ->
                     listOf(
-                        keyCode(KeyEvent.KEYCODE_BUTTON_B, CardSide.ANSWER),
+                        keyCode(KeyEvent.KEYCODE_BUTTON_A, CardSide.ANSWER),
                         keyCode(KeyEvent.KEYCODE_3, CardSide.ANSWER),
                         keyCode(KeyEvent.KEYCODE_NUMPAD_3, CardSide.ANSWER),
                         keyCode(KeyEvent.KEYCODE_DPAD_CENTER, CardSide.ANSWER),
@@ -116,7 +116,7 @@ enum class ViewerCommand : MappableAction<ReviewerBinding> {
                     )
                 ANSWER_EASY ->
                     listOf(
-                        keyCode(KeyEvent.KEYCODE_BUTTON_A, CardSide.ANSWER),
+                        keyCode(KeyEvent.KEYCODE_BUTTON_Y, CardSide.ANSWER),
                         keyCode(KeyEvent.KEYCODE_4, CardSide.ANSWER),
                         keyCode(KeyEvent.KEYCODE_NUMPAD_4, CardSide.ANSWER),
                     )
@@ -175,7 +175,7 @@ enum class ViewerCommand : MappableAction<ReviewerBinding> {
                 SHOW_HINT -> listOf(keyCode(KeyEvent.KEYCODE_H, CardSide.BOTH))
                 SHOW_ALL_HINTS -> listOf(keyCode(KeyEvent.KEYCODE_G, CardSide.BOTH))
                 ADD_NOTE -> listOf(keyCode(KeyEvent.KEYCODE_A, CardSide.BOTH))
-                SHOW_ANSWER,
+                SHOW_ANSWER -> listOf(keyCode(KeyEvent.KEYCODE_BUTTON_A, CardSide.QUESTION))
                 DELETE,
                 EXIT,
                 UNSET_FLAG,

@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:id="@+id/dualscreen_card_area"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone">
+
+        <WebView
+            android:id="@+id/dualscreen_answer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <FrameLayout
+            android:id="@+id/dualscreen_whiteboard"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <RelativeLayout
+            android:id="@+id/dualscreen_pen_palette"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom" />
+
+        <LinearLayout
+            android:id="@+id/dualscreen_draw_tools"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="12dp"
+            android:background="@drawable/dualscreen_pill"
+            android:backgroundTint="?attr/topBarColor"
+            android:orientation="horizontal"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/dualscreen_draw_undo"
+                style="@style/DualScreenChipButton"
+                android:contentDescription="@string/undo"
+                android:src="@drawable/ic_undo_white" />
+
+            <ImageButton
+                android:id="@+id/dualscreen_draw_eraser"
+                style="@style/DualScreenChipButton"
+                android:contentDescription="@string/enable_eraser"
+                android:src="@drawable/ic_eraser" />
+
+            <ImageButton
+                android:id="@+id/dualscreen_draw_clear"
+                style="@style/DualScreenChipButton"
+                android:contentDescription="@string/clear_whiteboard"
+                android:src="@drawable/ic_clear_white" />
+
+            <ImageButton
+                android:id="@+id/dualscreen_draw_pen_color"
+                style="@style/DualScreenChipButton"
+                android:contentDescription="@string/title_whiteboard_editor"
+                android:src="@drawable/ic_color_lens_white_24dp" />
+
+            <ImageButton
+                android:id="@+id/dualscreen_draw_swap"
+                style="@style/DualScreenChipButton"
+                android:contentDescription="@string/dual_screen_swap"
+                android:src="@drawable/ic_dualscreen_swap" />
+
+            <ImageButton
+                android:id="@+id/dualscreen_draw_more"
+                style="@style/DualScreenChipButton"
+                android:contentDescription="@string/dual_screen_more"
+                android:src="@drawable/ic_more_vertical" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/dualscreen_button_area"
+        android:animateLayoutChanges="true"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <FrameLayout
+            android:id="@+id/dualscreen_show_answer"
+            style="@style/DualScreenTile"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="?attr/hardButtonRef"
+            android:theme="@style/HardButton">
+
+            <com.ichi2.ui.FixedTextView
+                style="@style/FooterButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="@string/show_answer"
+                android:textColor="?attr/answerButtonTextColor"
+                android:textSize="26sp" />
+
+            <TextView
+                android:tag="hint"
+                style="@style/DualScreenHint"
+                tools:text="A" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/dualscreen_keyboard"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="3dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/dualscreen_typed_answer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="start"
+                android:gravity="center"
+                android:maxLines="1"
+                android:padding="8dp"
+                android:textSize="24sp"
+                android:visibility="gone"
+                tools:text="hi" />
+
+            <LinearLayout
+                android:id="@+id/dualscreen_key_rows"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="3"
+                android:orientation="vertical" />
+
+            <LinearLayout style="@style/DualScreenKeyRow">
+
+                <ImageView
+                    android:id="@+id/dualscreen_key_system"
+                    style="@style/DualScreenKey"
+                    android:layout_weight="1.2"
+                    android:contentDescription="@string/keyboard"
+                    android:src="@drawable/ic_keyboard" />
+
+                <ImageView
+                    android:id="@+id/dualscreen_key_language"
+                    style="@style/DualScreenKey"
+                    android:layout_weight="1.2"
+                    android:contentDescription="@string/language"
+                    android:src="@drawable/ic_language_black_24dp" />
+
+                <TextView
+                    android:id="@+id/dualscreen_key_symbols"
+                    style="@style/DualScreenKey"
+                    android:layout_weight="1.3"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/dualscreen_key_space"
+                    style="@style/DualScreenKey"
+                    android:layout_weight="4"
+                    android:contentDescription="@string/dual_screen_space"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textSize="16sp" />
+
+                <FrameLayout
+                    android:id="@+id/dualscreen_key_show_answer"
+                    style="@style/DualScreenKey"
+                    android:layout_weight="3.5"
+                    android:background="?attr/hardButtonRef"
+                    android:theme="@style/HardButton">
+
+                    <com.ichi2.ui.FixedTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="@string/show_answer"
+                        android:textColor="?attr/answerButtonTextColor"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:tag="hint"
+                        style="@style/DualScreenHint"
+                        android:layout_margin="4dp"
+                        tools:text="A" />
+                </FrameLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/dualscreen_ease_tiles"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/dualscreen_tile_row1"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+            <FrameLayout
+                android:id="@+id/dualscreen_ease1"
+                style="@style/DualScreenTile"
+                android:background="?attr/againButtonRef"
+                android:theme="@style/AgainButton">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <com.ichi2.ui.FixedTextView
+                        android:tag="next_time"
+                        style="@style/AgainButtonTimeStyle"
+                        android:textSize="16sp"
+                        tools:text="10m" />
+
+                    <com.ichi2.ui.FixedTextView
+                        style="@style/AgainButtonEaseStyle"
+                        android:text="@string/ease_button_again"
+                        android:textSize="24sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:tag="hint"
+                    style="@style/DualScreenHint"
+                    tools:text="A" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/dualscreen_ease2"
+                style="@style/DualScreenTile"
+                android:background="?attr/hardButtonRef"
+                android:theme="@style/HardButton">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <com.ichi2.ui.FixedTextView
+                        android:tag="next_time"
+                        style="@style/HardButtonTimeStyle"
+                        android:textSize="16sp"
+                        tools:text="10m" />
+
+                    <com.ichi2.ui.FixedTextView
+                        style="@style/HardButtonEaseStyle"
+                        android:text="@string/ease_button_hard"
+                        android:textSize="24sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:tag="hint"
+                    style="@style/DualScreenHint"
+                    tools:text="A" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/dualscreen_ease3"
+                style="@style/DualScreenTile"
+                android:background="?attr/goodButtonRef"
+                android:theme="@style/GoodButton">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <com.ichi2.ui.FixedTextView
+                        android:tag="next_time"
+                        style="@style/GoodButtonTimeStyle"
+                        android:textSize="16sp"
+                        tools:text="10m" />
+
+                    <com.ichi2.ui.FixedTextView
+                        style="@style/GoodButtonEaseStyle"
+                        android:text="@string/ease_button_good"
+                        android:textSize="24sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:tag="hint"
+                    style="@style/DualScreenHint"
+                    tools:text="A" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/dualscreen_ease4"
+                style="@style/DualScreenTile"
+                android:background="?attr/easyButtonRef"
+                android:theme="@style/EasyButton">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <com.ichi2.ui.FixedTextView
+                        android:tag="next_time"
+                        style="@style/EasyButtonTimeStyle"
+                        android:textSize="16sp"
+                        tools:text="10m" />
+
+                    <com.ichi2.ui.FixedTextView
+                        style="@style/EasyButtonEaseStyle"
+                        android:text="@string/ease_button_easy"
+                        android:textSize="24sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:tag="hint"
+                    style="@style/DualScreenHint"
+                    tools:text="A" />
+            </FrameLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/dualscreen_tile_row2"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:visibility="gone" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/dualscreen_dock"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="?attr/colorPrimary"
+        android:orientation="horizontal"
+        android:theme="@style/ActionBarStyle">
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_undo"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/undo"
+            android:src="@drawable/ic_undo_white" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_redo"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/redo"
+            android:src="@drawable/ic_redo" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_eraser"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/enable_eraser"
+            android:src="@drawable/ic_eraser"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_clear_whiteboard"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/clear_whiteboard"
+            android:src="@drawable/ic_clear_white"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_pen_color"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/title_whiteboard_editor"
+            android:src="@drawable/ic_color_lens_white_24dp"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_mark"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/menu_mark_note"
+            android:src="@drawable/ic_star_border_white" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_flag"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/menu_flag_card"
+            android:src="@drawable/ic_flag_transparent" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_edit"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/cardeditor_title_edit_card"
+            android:src="@drawable/ic_mode_edit_white" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_replay"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/replay_media"
+            android:src="@drawable/ic_play_circle_white" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_swap"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/dual_screen_swap"
+            android:src="@drawable/ic_dualscreen_swap" />
+
+        <ImageButton
+            android:id="@+id/dualscreen_action_more"
+            style="@style/DualScreenDockButton"
+            android:contentDescription="@string/dual_screen_more"
+            android:src="@drawable/ic_more_vertical" />
+    </LinearLayout>
+</LinearLayout>

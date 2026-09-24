@@ -17,9 +17,11 @@ import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.KeyboardShortcutGroup
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
@@ -77,6 +79,10 @@ import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.KEY_EXPORT_PATH
 import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.REQUEST_EXPORT_SAVE
 import com.ichi2.anki.dialogs.ExportReadyDialog.Companion.REQUEST_EXPORT_SHARE
 import com.ichi2.anki.dialogs.SimpleMessageDialog
+import com.ichi2.anki.dualscreen.SecondaryDisplay
+import com.ichi2.anki.dualscreen.SecondaryDisplayCompanion
+import com.ichi2.anki.dualscreen.SecondaryDisplayGuide
+import com.ichi2.anki.dualscreen.supportsCompanionDisplay
 import com.ichi2.anki.exception.SystemStorageException
 import com.ichi2.anki.libanki.Collection
 import com.ichi2.anki.preferences.sharedPrefs
@@ -165,14 +171,31 @@ open class AnkiActivity(
         }
     }
 
+    protected open val secondaryDisplay: SecondaryDisplay<*>? by lazy {
+        if (supportsCompanionDisplay()) SecondaryDisplayCompanion(this) else SecondaryDisplayGuide(this)
+    }
+
     override fun onStart() {
         super.onStart()
         customTabActivityHelper.bindCustomTabsService(this)
+        secondaryDisplay?.start()
     }
 
     override fun onStop() {
         super.onStop()
         customTabActivityHelper.unbindCustomTabsService(this)
+        secondaryDisplay?.stop()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+        secondaryDisplay?.dispatchKeyEvent(event) == true || super.dispatchKeyEvent(event)
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean =
+        secondaryDisplay?.scrollWithStick(event) == true || super.dispatchGenericMotionEvent(event)
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) secondaryDisplay?.clearNavigation()
+        return super.dispatchTouchEvent(event)
     }
 
     override fun onDestroy() {

@@ -1,120 +1,85 @@
 <p align="center">
-<img alt="" src="docs/graphics/logos/banner_readme.png"/>
+<img alt="" src="docs/dualscreen/banner.png"/>
 </p>
 
-<a href="https://github.com/ankidroid/Anki-Android/releases"><img src="https://img.shields.io/github/v/release/ankidroid/Anki-Android" alt="release"/></a>
-<a href="https://github.com/ankidroid/Anki-Android/actions"><img src="https://img.shields.io/github/checks-status/ankidroid/Anki-Android/main?label=build" alt="build"/></a>
-<a href="https://opencollective.com/ankidroid"><img src="https://img.shields.io/opencollective/all/ankidroid" alt="Open Collective backers and sponsors"/></a>
-<a href="https://github.com/ankidroid/Anki-Android/issues"><img src="https://img.shields.io/github/commit-activity/m/ankidroid/Anki-Android" alt="commit-activity"/></a>
-<a href="https://github.com/ankidroid/Anki-Android/network/members"><img src="https://img.shields.io/github/forks/ankidroid/Anki-Android" alt="forks"/></a>
-<a href="https://github.com/ankidroid/Anki-Android/stargazers"><img src="https://img.shields.io/github/stars/ankidroid/Anki-Android" alt="stars"/></a>
-<a href="https://crowdin.com/project/ankidroid"><img src="https://badges.crowdin.net/ankidroid/localized.svg"></img></a>
-<a href="https://github.com/ankidroid/Anki-Android/graphs/contributors"><img src="https://img.shields.io/github/contributors/ankidroid/Anki-Android" alt="contributors"/></a>
-<a href="https://discord.gg/qjzcRTx"><img src="https://img.shields.io/discord/368267295601983490"></img></a>
-<a href="https://github.com/ankidroid/Anki-Android/blob/main/COPYING"><img src="https://img.shields.io/github/license/ankidroid/Anki-Android" alt="license"/></a>
+<a href="https://github.com/asa07-salihg/Anki-Android-Dualscreen/releases"><img src="https://img.shields.io/github/v/release/asa07-salihg/Anki-Android-Dualscreen" alt="release"/></a>
+<a href="https://github.com/asa07-salihg/Anki-Android-Dualscreen/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/asa07-salihg/Anki-Android-Dualscreen/release.yml?label=build" alt="build"/></a>
+<a href="https://github.com/asa07-salihg/Anki-Android-Dualscreen/releases"><img src="https://img.shields.io/github/downloads/asa07-salihg/Anki-Android-Dualscreen/total" alt="downloads"/></a>
+<a href="COPYING"><img src="https://img.shields.io/github/license/asa07-salihg/Anki-Android-Dualscreen" alt="license"/></a>
 
-# AnkiDroid
-A semi-official port of the open source [Anki](https://apps.ankiweb.net/index.html) spaced repetition flashcard system to Android. Memorize anything with AnkiDroid!
+# AnkiDroid Dualscreen
+[AnkiDroid](https://github.com/ankidroid/Anki-Android) for Android handhelds with two screens, like the [AYN Thor](https://www.ayntec.com/products/ayn-thor). The card stays on the top screen and everything you press is on the bottom one.
 
-<img src="docs/graphics/logos/ankidroid_logo.png" align="right" width="40%" height="100%"></img>
+This is a fork, not an official AnkiDroid release. Please report problems here and not to the AnkiDroid team.
 
 ### Features
 
-<div style="display:flex;">
- 
-- Night mode
-- Whiteboard 
-- Progress widget
-- Detailed statistics
-- Syncing with AnkiWeb
-- Write answers (optional)
-- Text-to-speech integration
-- More than 10,000 premade decks
-- Spaced repetition (AI-optimized [FSRS algorithm](https://github.com/open-spaced-repetition))
-- Supported contents: text, images, sounds, MathJax
-- Add cards by intent from other applications like dictionaries
+- Review controls on the bottom screen: show answer, the four answer buttons, undo, mark, flag, edit and the rest of the menu
+- Swap the screens with one button if you would rather have the card at the bottom
+- A keyboard on the bottom screen for cards where you type the answer. It picks the layout from the answer, the field's keyboard language and your phone's keyboards, and covers more than 45 languages including Cyrillic, Greek, Arabic, Hebrew, Korean, Japanese kana and Hindi. For scripts it cannot type, such as Chinese characters, the phone's own keyboard opens instead
+- The whole bottom screen as a whiteboard
+- D-pad navigation across both screens, including toolbars, lists, menus and settings
+- A bottom panel on the other screens with the current deck, a Study button and shortcuts
+- Optionally keep the question on top and show the answer on the bottom screen
+- Nothing appears twice: if the top screen already shows something, the bottom one leaves it out
+- Everything else AnkiDroid does, including AnkiWeb sync, FSRS and statistics
 
-</div>
+<p>
+<img src="docs/dualscreen/whiteboard.png" alt="Whiteboard on the bottom screen" width="32%"/>
+<img src="docs/dualscreen/menu.png" alt="A menu opened on the bottom screen" width="32%"/>
+<img src="docs/dualscreen/companion.png" alt="The bottom panel next to the card browser" width="32%"/>
+</p>
+
+The options are under **Settings > Reviewing > Dual screen**.
+
+Devices
+-------
+Any device whose second screen shows up in Android as a separate display should work. The layout adjusts to the size of the second screen.
+
+- **[AYN Thor](https://www.ayntec.com/products/ayn-thor)** (3.92", 1240×1080) is what this was built on
+- **[Anbernic RG DS](https://anbernic.com/products/rgds)** (4", 640×480) and **[AYANEO Pocket DS](https://www.ayaneo.com/product/AYANEO-Pocket-DS)** (5", 1024×768) were tested at their screen sizes. On the RG DS, Android treats the bottom screen as the main one, so use **Swap screens**
+- **[OneXSugar Sugar 1](https://onexplayerstore.com/products/onexsugar-sugar-1-the-world-s-first-transformable-dual-screen-handheld-console)**, **[Retroid Pocket Duo](https://www.goretroid.com/products/retroid-pocket-duo-handheld)** and the **[Retroid Dual Screen Add-on](https://www.goretroid.com/products/retroid-dual-screen-add-on)** should work but have not been tried
+
+Controls
+--------
+On the question, **A** shows the answer. On the answer, **A** is Good, **B** is Again, **X** is Hard and **Y** is Easy.
+
+The **D-pad** moves a highlight across both screens as if they were one, and **A** presses whatever is highlighted. **B** closes a menu and **Back** leaves the screen.
+
+The bindings can be changed in **Settings > Controls**, and the hints on the bottom screen follow them.
 
 Install
----------
-<div style="display:flex;">
-
-<a href="https://play.google.com/store/apps/details?id=com.ichi2.anki&utm_source=global_co&utm_medium=prtnr&utm_content=Mar2515&utm_campaign=PartBadge&pcampaignid=MKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1">
-    <img alt="Get it on Google Play" height="80"
-        src="docs/graphics/logos/google-badge.png" /></a>
-
-<a href="https://f-droid.org/repository/browse/?fdid=com.ichi2.anki">
-    <img alt="Get it on F-Droid" height="80"
-        src="docs/graphics/logos/f-droid-badge.png"></a>
-
-<a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/ankidroid/Anki-Android">
+-------
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/asa07-salihg/Anki-Android-Dualscreen">
     <img alt="Get it on Obtainium" height="80"
         src="https://github.com/user-attachments/assets/713d71c5-3dec-4ec4-a3f2-8d28d025a9c6"/></a>
 
-</div>
+Or download `AnkiDroid-Dualscreen.apk` from [Releases](https://github.com/asa07-salihg/Anki-Android-Dualscreen/releases/latest). Every release has a `SHA256SUMS.txt` next to the APK so you can check the download.
 
-Signing certificate fingerprint to [verify](https://developer.android.com/studio/command-line/apksigner#usage-verify) the APK:
+It installs as **AnkiDroid Dualscreen** (`com.ichi2.anki.dualscreen`), next to AnkiDroid and with its own collection. Sync with AnkiWeb to bring your decks over.
+
+Building
+--------
+With JDK 21:
 ```
-SHA-256: 2071534f0f4b5e54ae952dd275d70da6e3459ee69909d2ab1b4843c4c5b21a45 
-SHA-1: f24e06a3657b190a12671100402df32d7b9b3d36
+./gradlew :AnkiDroid:assembleFullRelease
 ```
+Everything else is the same as upstream, see the [development guide](https://github.com/ankidroid/Anki-Android/wiki/Development-Guide).
 
-Wiki
-----
-View [Wiki](https://github.com/ankidroid/Anki-Android/wiki)
+Pushing a `v*` tag builds a signed APK and publishes it as a release.
 
-Help
-----
-Check the [user manual](https://ankidroid.org/docs/manual.html) and the wiki for usage instructions. See the [help page](https://ankidroid.org/docs/help.html) 
-for how to submit a bug report or contact a project member, etc.
-
-Contribute
-----------
-You can contribute to AnkiDroid by beta testing, translating, or submitting code. 
-See the [contribution wiki page](https://github.com/ankidroid/Anki-Android/wiki/Contributing) for more info.
-
-Join Us On
-----------
-
-<a href="https://discord.gg/qjzcRTx"><img src="docs/graphics/logos/discord_logo_color.svg" height="46px"/></a>
-<a href="https://www.reddit.com/r/Anki"><img src="docs/graphics/logos/reddit_logo_color.png" height="50px"/></a>
-<a href="https://www.facebook.com/AnkiDroid/"><img src="docs/graphics/logos/facebook_logo_color.png" height="50px"/></a>
-<a href="https://x.com/ankidroid"><img src="docs/graphics/logos/twitter_logo.png" height="50px"/></a>
-<a href="https://forums.ankiweb.net/"><img src="/docs/graphics/logos/anki_forums_logo.png" height="50px"/></a>
-
-## Credits
-<!--- Do not rename this section. AnkiDroid contains a deep link to the section
-header - see https://github.com/ankidroid/Anki-Android/pull/11803 --->
-
-### Code Contributors
-
-Thanks to these awesome code contributors who keep this project going
-
-<a href="https://github.com/ankidroid/Anki-Android/graphs/contributors"><img src="https://opencollective.com/ankidroid/contributors.svg?width=890&button=false" /></a>
-
-### [Sponsors](https://opencollective.com/ankidroid#sponsor)
-<a href="https://opencollective.com/ankidroid#sponsor" target="_blank">
-  <img alt="AnkiDroid Sponsors" src="https://opencollective.com/Ankidroid/sponsors.svg?width=890" />
-</a>
-
-### [Backers](https://opencollective.com/ankidroid#backer)
-
-A big thank you to each of our backers 🙏
-<a href="https://opencollective.com/Ankidroid#backers" target="_blank"><img width=110 src="https://opencollective.com/Ankidroid/backers/badge.svg?"></a>
-
-<p>Your generous donations mean the world to us, and we can't express our gratitude enough. Your support fuels our mission and helps us make a real difference</p>
-
-<a href="https://opencollective.com/Ankidroid/donate" target="_blank">
-  <img alt="Donate to AnkiDroid" src="https://opencollective.com/Ankidroid/donate/button@2x.png?color=blue" width=200 />
-</a>
-
-### [Translators](https://crowdin.com/project/ankidroid/activity-stream)
-
-Thanks to our 1400 translators, for allowing us to be available, partially or totally, in 99 languages as of July 2022.
+Credits
+-------
+- [AnkiDroid](https://github.com/ankidroid/Anki-Android) and its [contributors](https://github.com/ankidroid/Anki-Android/graphs/contributors). This is their app with a second screen added
+- [Anki](https://github.com/ankitects/anki) by Ankitects, which AnkiDroid is built on
+- [Cocoon](https://github.com/inssekt/CocoonFE), for showing how two screens can work as one and how a D-pad highlight should feel
+- [Obtainium](https://github.com/ImranR98/Obtainium), for updates straight from GitHub releases
+- [Material Design Icons](https://github.com/google/material-design-icons), for the swap and backspace icons
 
 License
 -------
-* [GPL-3.0 License](https://github.com/ankidroid/Anki-Android/blob/main/COPYING)
+This is a modified version of AnkiDroid 2.24.1. The changes were made in 2026 and are listed in the commit history.
+
+* [GPL-3.0 License](COPYING), like AnkiDroid
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end
-* [LGPL-3.0 License](https://github.com/ankidroid/Anki-Android/blob/main/api/COPYING.LESSER) for the AnkiDroid API
+* [LGPL-3.0 License](api/COPYING.LESSER) for the AnkiDroid API

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="@dimen/dualscreen_header_padding">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:text="@string/dual_screen_controls"
+        android:textSize="@dimen/dualscreen_title_text"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout style="@style/DualScreenGuideRow">
+
+            <TextView
+                style="@style/DualScreenGuideBadge"
+                android:backgroundTint="#E1343C"
+                android:text="@string/dual_screen_button_a" />
+
+            <TextView
+                style="@style/DualScreenGuideLabel"
+                android:text="@string/dual_screen_guide_a" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DualScreenGuideRow">
+
+            <TextView
+                style="@style/DualScreenGuideBadge"
+                android:backgroundTint="#F5C41E"
+                android:text="@string/dual_screen_button_b" />
+
+            <TextView
+                style="@style/DualScreenGuideLabel"
+                android:text="@string/ease_button_again" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DualScreenGuideRow">
+
+            <TextView
+                style="@style/DualScreenGuideBadge"
+                android:backgroundTint="#346EE1"
+                android:text="@string/dual_screen_button_x" />
+
+            <TextView
+                style="@style/DualScreenGuideLabel"
+                android:text="@string/ease_button_hard" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DualScreenGuideRow">
+
+            <TextView
+                style="@style/DualScreenGuideBadge"
+                android:backgroundTint="#28AA50"
+                android:text="@string/dual_screen_button_y" />
+
+            <TextView
+                style="@style/DualScreenGuideLabel"
+                android:text="@string/ease_button_easy" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/DualScreenGuideRow">
+
+            <TextView
+                style="@style/DualScreenGuideBadge"
+                android:backgroundTint="#4C4C52"
+                android:text="@string/dual_screen_button_dpad" />
+
+            <TextView
+                style="@style/DualScreenGuideLabel"
+                android:text="@string/dual_screen_guide_dpad" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

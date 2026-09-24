@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/dualscreen_status_pill"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/dualscreen_pill"
+    android:backgroundTint="?attr/topBarColor"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="14dp"
+    android:paddingTop="6dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="6dp">
+
+    <ImageView
+        android:id="@+id/dualscreen_pill_flag"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginEnd="8dp"
+        android:importantForAccessibility="no"
+        android:visibility="gone"
+        tools:src="@drawable/ic_flag_red"
+        tools:visibility="visible" />
+
+    <ImageView
+        android:id="@+id/dualscreen_pill_mark"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginEnd="8dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_star_white"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <com.ichi2.ui.FixedTextView
+        android:id="@+id/dualscreen_pill_new"
+        style="@style/DualScreenPillText"
+        android:textColor="?attr/newCountColor"
+        tools:text="13" />
+
+    <com.ichi2.ui.FixedTextView
+        android:id="@+id/dualscreen_pill_learn"
+        style="@style/DualScreenPillText"
+        android:layout_marginStart="10dp"
+        android:textColor="?attr/learnCountColor"
+        tools:text="3" />
+
+    <com.ichi2.ui.FixedTextView
+        android:id="@+id/dualscreen_pill_review"
+        style="@style/DualScreenPillText"
+        android:layout_marginStart="10dp"
+        android:textColor="?attr/reviewCountColor"
+        tools:text="7" />
+
+    <com.ichi2.ui.FixedTextView
+        android:id="@+id/dualscreen_pill_timer"
+        style="@style/DualScreenPillText"
+        android:layout_marginStart="14dp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:visibility="gone"
+        tools:text="00:12"
+        tools:visibility="visible" />
+</LinearLayout>

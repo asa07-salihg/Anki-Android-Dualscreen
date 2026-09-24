@@ -56,6 +56,7 @@ import androidx.appcompat.widget.TooltipCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import anki.frontend.SetSchedulingStatesRequest
 import anki.scheduler.CardAnswer.Rating
@@ -71,6 +72,7 @@ import com.ichi2.anki.cardviewer.ViewerCommand
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.dualscreen.SecondaryDisplayReviewer
 import com.ichi2.anki.libanki.Card
 import com.ichi2.anki.libanki.CardId
 import com.ichi2.anki.libanki.Collection
@@ -185,6 +187,9 @@ open class Reviewer :
     private lateinit var textBarLearn: TextView
     private lateinit var textBarReview: TextView
     private lateinit var answerTimer: AnswerTimer
+    override val secondaryDisplay: SecondaryDisplayReviewer by lazy {
+        SecondaryDisplayReviewer(this, ::onSecondaryDisplayCommand, ::onSecondaryDisplayLayoutChanged)
+    }
     private var prefHideDueCount = false
 
     // Whiteboard
@@ -236,6 +241,7 @@ open class Reviewer :
         }
         colorPalette = findViewById(R.id.whiteboard_editor)
         answerTimer = AnswerTimer(findViewById(R.id.card_time))
+        secondaryDisplay.mirrorTimer(findViewById(R.id.card_time))
         textBarNew = findViewById(R.id.new_number)
         textBarLearn = findViewById(R.id.learn_number)
         textBarReview = findViewById(R.id.review_number)
@@ -254,6 +260,28 @@ open class Reviewer :
         previousCardId = savedInstanceState?.getLongOrNull(KEY_PREVIOUS_CARD_ID)
     }
 
+    private fun onSecondaryDisplayCommand(command: ViewerCommand) {
+        if (command == ViewerCommand.UNDO && showWhiteboard && whiteboard?.undoEmpty() == false) {
+            whiteboard!!.undo()
+            return
+        }
+        executeCommand(command)
+    }
+
+    private fun onSecondaryDisplayLayoutChanged(
+        isActive: Boolean,
+        showMainAnswerButtons: Boolean,
+    ) {
+        toolbar.isVisible = !isActive
+        topBarLayout?.isVisible = !isActive && prefShowTopbar
+        findViewById<View>(R.id.answer_options_layout).isVisible = !isActive || showMainAnswerButtons
+        if (isDisplayingAnswer) {
+            fillFlashcard()
+        } else {
+            processCardAction { cardWebView -> cardWebView?.let { secondaryDisplay.decorateMainCard(it) } }
+        }
+    }
+
     override fun onPause() {
         answerTimer.pause()
         super.onPause()
@@ -266,8 +294,14 @@ open class Reviewer :
         }
         super.onResume()
         if (typeAnswer?.autoFocusEditText() == true) {
-            answerField?.focusWithKeyboard()
+            focusAnswerField()
         }
+    }
+
+    override fun focusAnswerField() {
+        val field = answerField ?: return
+        field.requestFocus()
+        field.post { if (!secondaryDisplay.isTypingOnPanel) super.focusAnswerField() }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -839,7 +873,8 @@ open class Reviewer :
         actionButtons.setCustomButtonsStatus(menu)
         val alpha = Themes.ALPHA_ICON_ENABLED_LIGHT
         val markCardIcon = menu.findItem(R.id.action_mark_card)
-        if (currentCard != null && isMarked(getColUnsafe, currentCard!!.note(getColUnsafe))) {
+        val isNoteMarked = currentCard != null && isMarked(getColUnsafe, currentCard!!.note(getColUnsafe))
+        if (isNoteMarked) {
             markCardIcon.setTitle(R.string.menu_unmark_note).setIcon(R.drawable.ic_star_white)
         } else {
             markCardIcon.setTitle(R.string.menu_mark_note).setIcon(R.drawable.ic_star_border_white)
@@ -922,6 +957,13 @@ open class Reviewer :
                 }
             }
         }
+        secondaryDisplay.setActionState(
+            isMarked = isNoteMarked,
+            flag = currentCard?.flag ?: Flag.NONE,
+            undoEnabled = undoEnabled,
+            redoEnabled = colIsOpenUnsafe() && getColUnsafe.redoAvailable(),
+            isEraserMode = isEraserMode,
+        )
         menu.findItem(R.id.action_toggle_auto_advance).apply {
             if (actionButtons.status.autoAdvanceMenuIsNeverShown()) return@apply
             // always show if enabled (to allow disabling)
@@ -1053,21 +1095,17 @@ open class Reviewer :
         keyCode: Int,
         event: KeyEvent,
     ): Boolean {
-        if (answerFieldIsFocused()) {
+        if (answerFieldIsFocused() && !KeyEvent.isGamepadButton(keyCode)) {
             return super.onKeyDown(keyCode, event)
         }
         if (processor.onKeyDown(event) || super.onKeyDown(keyCode, event)) {
             return true
         }
-        return false
+        return keyCode == KeyEvent.KEYCODE_BUTTON_B
     }
 
-    override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
-        if (processor.onGenericMotionEvent(event)) {
-            return true
-        }
-        return super.onGenericMotionEvent(event)
-    }
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean =
+        processor.onGenericMotionEvent(event) || super.dispatchGenericMotionEvent(event)
 
     override fun canAccessScheduler(): Boolean = true
 
@@ -1092,6 +1130,7 @@ open class Reviewer :
         easeButton3!!.setup(background[2], textColor[2], R.string.ease_button_good)
         easeButton4!!.setVisibility(View.VISIBLE)
         easeButton3!!.requestFocus()
+        secondaryDisplay.showCard(cardContent, server.baseUrl(), isAnswer = true)
 
         // Show next review time
         if (shouldShowNextReviewTime()) {
@@ -1102,6 +1141,7 @@ open class Reviewer :
                 easeButton2!!.nextTime = labels[1]
                 easeButton3!!.nextTime = labels[2]
                 easeButton4!!.nextTime = labels[3]
+                secondaryDisplay.setNextTimes(labels)
             }
         }
     }
@@ -1181,6 +1221,7 @@ open class Reviewer :
         textBarNew.text = newCount
         textBarLearn.text = lrnCount
         textBarReview.text = revCount
+        secondaryDisplay.setCounts(textBarNew.text, textBarLearn.text, textBarReview.text)
     }
 
     override fun fillFlashcard() {
@@ -1197,6 +1238,7 @@ open class Reviewer :
         if (!displayAnswer) {
             runStateMutationHook()
         }
+        secondaryDisplay.decorateMainCard(view)
     }
 
     override suspend fun updateCurrentCard() {
@@ -1277,6 +1319,7 @@ open class Reviewer :
         answerTimer.setupForCard(getColUnsafe, currentCard!!)
         delayedHide(100)
         super.displayCardQuestion()
+        secondaryDisplay.showCard(cardContent, server.baseUrl(), isAnswer = false, expectedAnswer = typeAnswer?.correct)
     }
 
     @VisibleForTesting
@@ -1702,6 +1745,7 @@ open class Reviewer :
             }
             whiteboard.handleTouchEvent(event)
         }
+        secondaryDisplay.attachWhiteboard(whiteboard, colorPalette)
     }
 
     // Show or hide the whiteboard
@@ -1717,6 +1761,7 @@ open class Reviewer :
                 enableDrawerSwipe()
             }
         }
+        secondaryDisplay.onWhiteboardVisibilityChanged()
     }
 
     private fun disableDrawerSwipeOnConflicts() {

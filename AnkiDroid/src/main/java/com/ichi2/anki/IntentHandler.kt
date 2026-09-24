@@ -32,6 +32,7 @@ import com.ichi2.anki.common.utils.trimToLength
 import com.ichi2.anki.dialogs.DialogHandler.Companion.storeMessage
 import com.ichi2.anki.dialogs.DialogHandlerMessage
 import com.ichi2.anki.dialogs.requireDeckPickerOrShowError
+import com.ichi2.anki.dualscreen.mainDisplayLaunchOptions
 import com.ichi2.anki.exception.SystemStorageException
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.noteeditor.NoteEditorLauncher
@@ -303,7 +304,7 @@ class IntentHandler : AbstractIntentHandler() {
         reloadIntent.action = Intent.ACTION_MAIN
         reloadIntent.addCategory(Intent.CATEGORY_LAUNCHER)
         reloadIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivityIfNeeded(reloadIntent, 0)
+        startActivityIfNeeded(reloadIntent, 0, mainDisplayLaunchOptions())
         finish()
     }
 

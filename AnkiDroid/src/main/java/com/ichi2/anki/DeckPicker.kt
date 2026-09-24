@@ -137,10 +137,12 @@ import com.ichi2.anki.dialogs.customstudy.CustomStudyDialog
 import com.ichi2.anki.dialogs.customstudy.CustomStudyDialog.CustomStudyAction
 import com.ichi2.anki.dialogs.customstudy.CustomStudyDialog.CustomStudyAction.Companion.REQUEST_KEY
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResultListener
+import com.ichi2.anki.dualscreen.SecondaryDisplayDeckPicker
 import com.ichi2.anki.export.ExportDialogFragment
 import com.ichi2.anki.filtered.FilteredDeckOptionsFragment
 import com.ichi2.anki.introduction.CollectionPermissionScreenLauncher
 import com.ichi2.anki.introduction.hasCollectionStoragePermissions
+import com.ichi2.anki.libanki.Consts.DEFAULT_DECK_ID
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.libanki.sched.DeckNode
 import com.ichi2.anki.mediacheck.MediaCheckFragment
@@ -247,6 +249,10 @@ open class DeckPicker :
     CsvImportResultLauncherProvider,
     CollectionPermissionScreenLauncher {
     val viewModel: DeckPickerViewModel by viewModels()
+
+    override val secondaryDisplay: SecondaryDisplayDeckPicker by lazy {
+        SecondaryDisplayDeckPicker(this, ::onSecondaryDisplayStudy, ::onSecondaryDisplayActiveChanged)
+    }
 
     private lateinit var binding: ActivityHomescreenBinding
 
@@ -660,6 +666,7 @@ open class DeckPicker :
 
         fun onStudiedTodayChanged(studiedToday: String) {
             deckPickerBinding.reviewSummaryTextView.text = studiedToday
+            secondaryDisplay.studiedToday = studiedToday
             // Adjust bottom margin of fabLinearLayout based on reviewSummaryTextView height
             deckPickerBinding.reviewSummaryTextView.doOnLayout { view ->
                 val layoutParams = floatingActionButtonBinding.fabLinearLayout.layoutParams as ViewGroup.MarginLayoutParams
@@ -725,9 +732,11 @@ open class DeckPicker :
                 data = deckList.data,
                 hasSubDecks = deckList.hasSubDecks,
             )
+            updateSecondaryDisplay()
         }
 
         fun onFocusedDeckChanged(deckId: DeckId?) {
+            updateSecondaryDisplay()
             val position = deckId?.let { viewModel.findDeckPosition(it) } ?: 0
 
             // Skip centering if the deck is already on screen.
@@ -1377,6 +1386,24 @@ open class DeckPicker :
             importColpkgListener = DatabaseRestorationListener(this, path)
         }
         mediaUsnOnConflict = savedInstanceState.getSerializableCompat("mediaUsnOnConflict")
+    }
+
+    private fun updateSecondaryDisplay() {
+        val tree = viewModel.dueTree
+        val focused = viewModel.focusedDeck?.let { tree?.find(it) }
+        secondaryDisplay.deck =
+            focused?.takeUnless { it.did == DEFAULT_DECK_ID && !it.hasCardsReadyToStudy() }
+                ?: tree?.children?.firstOrNull { it.did != DEFAULT_DECK_ID }
+                ?: focused
+    }
+
+    private fun onSecondaryDisplayStudy() {
+        val did = secondaryDisplay.deck?.did ?: return
+        launchCatchingTask { handleDeckSelection(did, DeckSelectionType.SKIP_STUDY_OPTIONS) }
+    }
+
+    private fun onSecondaryDisplayActiveChanged(isActive: Boolean) {
+        deckPickerBinding.reviewSummaryTextView.isVisible = !isActive
     }
 
     override fun onPause() {

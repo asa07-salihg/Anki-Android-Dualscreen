@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="dualscreen_header_padding">20dp</dimen>
+    <dimen name="dualscreen_action_padding">12dp</dimen>
+    <dimen name="dualscreen_action_text">16sp</dimen>
+    <dimen name="dualscreen_title_text">22sp</dimen>
+    <dimen name="dualscreen_body_text">15sp</dimen>
+    <dimen name="dualscreen_strip_height">112dp</dimen>
+</resources>

@@ -163,7 +163,7 @@ class BrowserMultiColumnAdapter(
                 focusedColor = pressedColor
             } else {
                 pressedColor = darkenColor(color, 0.85f)
-                focusedColor = darkenColor(color, 0.4f)
+                focusedColor = pressedColor
             }
 
             require(pressedColor != color)

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="@dimen/dualscreen_header_padding">
+
+        <com.ichi2.ui.FixedTextView
+            android:id="@+id/dualscreen_companion_deck"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textSize="@dimen/dualscreen_title_text"
+            android:textStyle="bold"
+            tools:text="Core 2000" />
+
+        <LinearLayout
+            android:id="@+id/dualscreen_companion_counts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.ichi2.ui.FixedTextView
+                android:id="@+id/dualscreen_companion_new"
+                style="@style/DualScreenPillText"
+                android:textColor="?attr/newCountColor"
+                tools:text="20" />
+
+            <com.ichi2.ui.FixedTextView
+                android:id="@+id/dualscreen_companion_learn"
+                style="@style/DualScreenPillText"
+                android:layout_marginStart="14dp"
+                android:textColor="?attr/learnCountColor"
+                tools:text="1" />
+
+            <com.ichi2.ui.FixedTextView
+                android:id="@+id/dualscreen_companion_review"
+                style="@style/DualScreenPillText"
+                android:layout_marginStart="14dp"
+                android:textColor="?attr/reviewCountColor"
+                tools:text="0" />
+        </LinearLayout>
+
+        <com.ichi2.ui.FixedTextView
+            android:id="@+id/dualscreen_companion_studied_today"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textSize="@dimen/dualscreen_body_text"
+            tools:text="Studied 12 cards in 3 minutes today" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/dualscreen_companion_study"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="?attr/goodButtonRef"
+        android:theme="@style/GoodButton">
+
+        <com.ichi2.ui.FixedTextView
+            style="@style/FooterButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/studyoptions_start"
+            android:textColor="?attr/answerButtonTextColor"
+            android:textSize="28sp" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorPrimary"
+        android:orientation="horizontal"
+        android:theme="@style/ActionBarStyle">
+
+        <TextView
+            android:id="@+id/dualscreen_companion_decks"
+            style="@style/DualScreenAction"
+            android:drawableTop="@drawable/ic_list_black"
+            android:text="@string/decks" />
+
+        <TextView
+            android:id="@+id/dualscreen_companion_add"
+            style="@style/DualScreenAction"
+            android:drawableTop="@drawable/ic_add"
+            android:text="@string/menu_add" />
+
+        <TextView
+            android:id="@+id/dualscreen_companion_browse"
+            style="@style/DualScreenAction"
+            android:drawableTop="@drawable/ic_flashcard_black"
+            android:text="@string/card_browser" />
+
+        <TextView
+            android:id="@+id/dualscreen_companion_statistics"
+            style="@style/DualScreenAction"
+            android:drawableTop="@drawable/ic_bar_chart_black"
+            android:text="@string/statistics" />
+
+        <TextView
+            android:id="@+id/dualscreen_companion_settings"
+            style="@style/DualScreenAction"
+            android:drawableTop="@drawable/ic_settings_black"
+            android:text="@string/settings" />
+    </LinearLayout>
+</LinearLayout>
