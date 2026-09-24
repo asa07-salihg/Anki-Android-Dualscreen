@@ -107,6 +107,9 @@ class PreferencesAnalyticsTest : RobolectricTest() {
             R.string.pref_allow_dangerous_js_api, // allow_dangerous_js_api
             // Security-sensitive settings (GHSL-2026-085)
             R.string.pref_allow_card_external_launch_key, // allowCardExternalLaunch
+            R.string.pref_dual_screen_key,
+            R.string.pref_dual_screen_answer_key,
+            R.string.pref_dual_screen_deck_picker_key,
         ).toStringResourceSet()
 
     @Test
