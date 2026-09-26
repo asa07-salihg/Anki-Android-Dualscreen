@@ -10,7 +10,7 @@
 # AnkiDroid Dualscreen
 [AnkiDroid](https://github.com/ankidroid/Anki-Android) for Android handhelds with two screens, like the [AYN Thor](https://www.ayntec.com/products/ayn-thor). The card stays on the top screen and everything you press is on the bottom one.
 
-This is a fork, not an official AnkiDroid release. Please report problems here and not to the AnkiDroid team.
+This is a fork, not an official AnkiDroid release. Please report problems here if you believe %100 dualscreen fork issue.
 
 ### Features
 
