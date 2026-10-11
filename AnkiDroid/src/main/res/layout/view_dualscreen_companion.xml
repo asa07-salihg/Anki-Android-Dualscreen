@@ -90,7 +90,7 @@
             android:id="@+id/dualscreen_companion_decks"
             style="@style/DualScreenAction"
             android:drawableTop="@drawable/ic_list_black"
-            android:text="@string/decks" />
+            android:text="@string/dual_screen_decks" />
 
         <TextView
             android:id="@+id/dualscreen_companion_add"
@@ -108,7 +108,7 @@
             android:id="@+id/dualscreen_companion_statistics"
             style="@style/DualScreenAction"
             android:drawableTop="@drawable/ic_bar_chart_black"
-            android:text="@string/statistics" />
+            android:text="@string/dual_screen_statistics" />
 
         <TextView
             android:id="@+id/dualscreen_companion_settings"

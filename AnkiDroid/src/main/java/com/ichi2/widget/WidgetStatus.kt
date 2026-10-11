@@ -1,41 +1,19 @@
-/*
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.widget
 
 import android.content.Context
-import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager.withCol
-import com.ichi2.anki.MetaDB
 import com.ichi2.anki.R
-import com.ichi2.anki.preferences.sharedPrefs
+import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.utils.android.SdCard
+import com.ichi2.anki.common.utils.ext.allDecksCounts
 import com.ichi2.anki.settings.Prefs
-import com.ichi2.anki.utils.ext.allDecksCounts
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import timber.log.Timber
-
-/**
- * @param dueCardsCount The number of due cards (new + lrn + rev)
- * @param eta The estimated time to review
- */
-data class SmallWidgetStatus(
-    val dueCardsCount: Int,
-    val eta: Int,
-)
 
 /**
  * The status of the widget.
@@ -88,25 +66,25 @@ object WidgetStatus {
         }
 
     suspend fun updateSmallWidgetStatus(context: Context) {
-        if (!AnkiDroidApp.isSdCardMounted) {
+        if (!SdCard.isMounted) {
             Timber.w("updateStatus failed: no SD Card")
             return
         }
         val status = querySmallWidgetStatus()
-        MetaDB.storeSmallWidgetStatus(context, status)
+        widgetRepository.storeSmallWidgetStatus(status)
         if (smallWidgetEnabled) {
             Timber.i("triggering small widget UI update")
             AnkiDroidWidgetSmall.UpdateService().doUpdate(context)
         }
         if (!Prefs.newReviewRemindersEnabled) {
-            (context.applicationContext as AnkiDroidApp).scheduleNotification()
+            widgetNotificationScheduler.scheduleNotification()
         }
     }
 
     /** Returns the status of each of the decks.  */
-    fun fetchSmall(context: Context): SmallWidgetStatus = MetaDB.getWidgetSmallStatus(context)
+    fun fetchSmall(): SmallWidgetStatus = widgetRepository.getWidgetSmallStatus()
 
-    fun fetchDue(context: Context): Int = MetaDB.getNotificationStatus(context)
+    fun fetchDue(): Int = widgetRepository.dueCardsCount()
 
     private suspend fun querySmallWidgetStatus(): SmallWidgetStatus =
         withCol {

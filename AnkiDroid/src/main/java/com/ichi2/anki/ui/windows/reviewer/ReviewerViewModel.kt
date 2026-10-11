@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2024 Brayan Oliveira <brayandso.dev@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.ui.windows.reviewer
 
 import androidx.lifecycle.SavedStateHandle
@@ -27,9 +14,15 @@ import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.Flag
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.asyncIO
-import com.ichi2.anki.browser.BrowserDestination
 import com.ichi2.anki.cardviewer.SingleCardSide
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.common.destinations.BrowserDestination
+import com.ichi2.anki.common.destinations.CardInfoDestination
+import com.ichi2.anki.common.destinations.CardInfoDestination.EntryPoint
+import com.ichi2.anki.common.destinations.DeckOptionsDestination
+import com.ichi2.anki.common.destinations.DeckOptionsEntry
+import com.ichi2.anki.common.destinations.NoteEditorDestination
+import com.ichi2.anki.common.destinations.StatisticsDestination
 import com.ichi2.anki.launchCatchingIO
 import com.ichi2.anki.libanki.Card
 import com.ichi2.anki.libanki.CardId
@@ -39,15 +32,10 @@ import com.ichi2.anki.libanki.NoteId
 import com.ichi2.anki.libanki.redoLabel
 import com.ichi2.anki.libanki.sched.CurrentQueueState
 import com.ichi2.anki.libanki.undoLabel
-import com.ichi2.anki.noteeditor.NoteEditorLauncher
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.observability.undoableOp
 import com.ichi2.anki.pages.AnkiServer
-import com.ichi2.anki.pages.CardInfoDestination
-import com.ichi2.anki.pages.DeckOptionsDestination
-import com.ichi2.anki.pages.DeckOptionsEntry
 import com.ichi2.anki.pages.PostRequestUri
-import com.ichi2.anki.pages.StatisticsDestination
 import com.ichi2.anki.preferences.reviewer.ViewerAction
 import com.ichi2.anki.previewer.CardViewerViewModel
 import com.ichi2.anki.previewer.TypeAnswer
@@ -65,13 +53,10 @@ import com.ichi2.anki.ui.windows.reviewer.autoadvance.AnswerAction
 import com.ichi2.anki.ui.windows.reviewer.autoadvance.AutoAdvance
 import com.ichi2.anki.ui.windows.reviewer.autoadvance.AutoAdvanceAction
 import com.ichi2.anki.ui.windows.reviewer.autoadvance.QuestionAction
-import com.ichi2.anki.utils.Destination
 import com.ichi2.anki.utils.ext.answerCard
 import com.ichi2.anki.utils.ext.cardStatsNoCardClean
-import com.ichi2.anki.utils.ext.currentCardStudy
 import com.ichi2.anki.utils.ext.flag
 import com.ichi2.anki.utils.ext.getLongOrNull
-import com.ichi2.anki.utils.ext.previousCardStudy
 import com.ichi2.anki.utils.ext.setUserFlagForCards
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -82,6 +67,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.intellij.lang.annotations.Language
 import timber.log.Timber
+import com.ichi2.anki.common.destinations.Destination as NavigateDestination
 
 class ReviewerViewModel(
     savedStateHandle: SavedStateHandle,
@@ -112,7 +98,7 @@ class ReviewerViewModel(
     val typeAnswerFlow = MutableStateFlow<TypeAnswer?>(null)
     val onTypedAnswerResultFlow = MutableSharedFlow<CompletableDeferred<String>>()
     val onCardUpdatedFlow = MutableSharedFlow<Unit>()
-    val destinationFlow = MutableSharedFlow<Destination>()
+    val navigateFlow = MutableSharedFlow<NavigateDestination>()
     val editNoteTagsFlow = MutableSharedFlow<NoteId>()
     val setDueDateFlow = MutableSharedFlow<CardId>()
     val resetProgressFlow = MutableSharedFlow<Unit>()
@@ -141,13 +127,14 @@ class ReviewerViewModel(
      * ensure that the custom JS scheduler has persisted its SchedulingStates
      * back to the Reviewer before we save it to the database.
      *
-     * This flag should be reset when we show the front of the card
-     * and only complete once we know the custom scheduler has finished its
-     * execution, or complete immediately if the custom scheduler has not
+     * This flag is reset before we show the front of the card
+     * and only completes once we know the custom scheduler has finished its
+     * execution, or completes immediately if the custom scheduler has not
      * been configured.
      */
-    private var mutationSignal = CompletableDeferred(Unit)
+    private var mutationSignal = CompletableDeferred<Unit>()
 
+    val isAutoAdvanceEnabledFlow = MutableStateFlow(autoAdvance.isEnabled)
     val answerButtonsNextTimeFlow: MutableStateFlow<AnswerButtonsNextTime?> = MutableStateFlow(null)
     private val shouldShowNextTimes = asyncIO { repository.getShouldShowNextTimes() }
 
@@ -177,7 +164,17 @@ class ReviewerViewModel(
         if (isAfterRecreation) {
             launchCatchingIO {
                 // TODO handle "Don't keep activities"
-                if (showingAnswer.value) showAnswer() else showQuestion()
+                if (showingAnswer.value) {
+                    showAnswer()
+                    // on configuration change: mutationSignal & queueState are retained
+                    // on process death: a new queueState/mutationSignal exist. Call
+                    // `runStateMutationHook` to ensure mutationSignal completes.
+                    if (!mutationSignal.isCompleted) {
+                        runStateMutationHook()
+                    }
+                } else {
+                    showQuestion()
+                }
             }
         } else {
             launchCatchingIO {
@@ -271,21 +268,20 @@ class ReviewerViewModel(
 
     private suspend fun emitEditNoteDestination() {
         val cardId = currentCard.await().id
-        val destination = NoteEditorLauncher.EditNoteFromPreviewer(cardId)
         Timber.i("Opening 'edit note' for card %d", cardId)
-        destinationFlow.emit(destination)
+        navigateFlow.emit(NoteEditorDestination.EditNoteFromPreviewer(cardId))
     }
 
     private suspend fun emitAddNoteDestination() {
         Timber.i("Launching 'add note'")
-        destinationFlow.emit(NoteEditorLauncher.AddNoteFromReviewer())
+        navigateFlow.emit(NoteEditorDestination.AddNoteFromReviewer())
     }
 
     private suspend fun emitCardInfoDestination() {
         val cardId = currentCard.await().id
-        val destination = CardInfoDestination(cardId, TR.currentCardStudy())
+        val destination = CardInfoDestination(cardId, EntryPoint.CURRENT_CARD_STUDY)
         Timber.i("Launching 'card info' for card %d", cardId)
-        destinationFlow.emit(destination)
+        navigateFlow.emit(destination)
     }
 
     private suspend fun emitPreviousCardInfoDestination() {
@@ -295,9 +291,9 @@ class ReviewerViewModel(
             actionFeedbackFlow.emit(TR.cardStatsNoCardClean())
             return
         }
-        val destination = CardInfoDestination(previousCardId, TR.previousCardStudy())
+        val destination = CardInfoDestination(previousCardId, EntryPoint.PREVIOUS_CARD_STUDY)
         Timber.i("Launching 'previous card info' for card %d", previousCardId)
-        destinationFlow.emit(destination)
+        navigateFlow.emit(destination)
     }
 
     @NeedsTest("verify that we show the proper deck option targets for the current card")
@@ -308,7 +304,7 @@ class ReviewerViewModel(
         val isFiltered = options.first { it.deckId == deckId }.isFiltered
         val destination = DeckOptionsDestination(deckId, isFiltered, options)
         Timber.i("Launching 'deck options' for deck %d", deckId)
-        destinationFlow.emit(destination)
+        navigateFlow.emit(destination)
     }
 
     /**
@@ -346,9 +342,9 @@ class ReviewerViewModel(
     private suspend fun emitBrowseDestination() {
         val deckId = withCol { decks.getCurrentId() }
         val cardId = currentCard.await().id
-        val destination = BrowserDestination.ToCard(deckId, cardId)
+        val destination = BrowserDestination.ScrollToCard(deckId, cardId)
         Timber.i("Launching 'browse options' for deck %d", deckId)
-        destinationFlow.emit(destination)
+        navigateFlow.emit(destination)
     }
 
     private suspend fun deleteNote() {
@@ -423,6 +419,7 @@ class ReviewerViewModel(
     private suspend fun toggleAutoAdvance() {
         Timber.v("ReviewerViewModel::toggleAutoAdvance")
         autoAdvance.isEnabled = !autoAdvance.isEnabled
+        isAutoAdvanceEnabledFlow.value = autoAdvance.isEnabled
         val message =
             if (autoAdvance.isEnabled) {
                 TR.actionsAutoAdvanceActivated()
@@ -453,6 +450,10 @@ class ReviewerViewModel(
                 isInputFocused = false
                 return byteArrayOf()
             }
+            "statesMutated" -> {
+                onStateMutationCallback()
+                return byteArrayOf()
+            }
         }
         return when (uri.backendMethodName) {
             "getSchedulingStatesWithContext" -> getSchedulingStatesWithContext()
@@ -463,6 +464,11 @@ class ReviewerViewModel(
 
     override suspend fun showQuestion() {
         Timber.v("ReviewerViewModel::showQuestion")
+        // 'Show answer' may be pressed while the question loads: reset before, not after.
+        // If it was pressed earlier, it is already waiting on the pending signal: keep it.
+        if (mutationSignal.isCompleted) {
+            mutationSignal = CompletableDeferred()
+        }
         super.showQuestion()
         runStateMutationHook()
         updateMarkIcon()
@@ -480,9 +486,12 @@ class ReviewerViewModel(
             }
             return
         }
-        mutationSignal = CompletableDeferred()
+        // https://github.com/ankitects/anki/commit/bd88c6d352dc7aeb4a674029eab7bdda2a821a78
         statesMutationEvalFlow.emit(
-            "anki.mutateNextCardStates('$stateMutationKey', async (states, customData, ctx) => { $js });",
+            """
+            anki.mutateNextCardStates('$stateMutationKey', async (states, customData, ctx) => { $js })
+                .finally(() => fetch("ankidroid/statesMutated", { method: "POST" }));
+            """,
         )
     }
 
@@ -515,6 +524,7 @@ class ReviewerViewModel(
 
     private suspend fun answerCardInternal(rating: Rating) {
         Timber.v("ReviewerViewModel::answerCard")
+        mutationSignal.await()
         val state = queueState.await() ?: return
         val card = currentCard.await()
         val answer =
@@ -760,7 +770,7 @@ class ReviewerViewModel(
                     ViewerAction.USER_ACTION_9 -> userAction(9)
                     ViewerAction.SUSPEND_MENU -> suspendCard()
                     ViewerAction.BURY_MENU -> buryCard()
-                    ViewerAction.STATISTICS -> destinationFlow.emit(StatisticsDestination())
+                    ViewerAction.STATISTICS -> navigateFlow.emit(StatisticsDestination)
                     ViewerAction.BROWSE -> emitBrowseDestination()
                     ViewerAction.PLAY_MEDIA -> replayMedia()
                     ViewerAction.FLAG_MENU -> {}

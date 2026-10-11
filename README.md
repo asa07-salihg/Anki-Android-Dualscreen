@@ -78,7 +78,7 @@ Credits
 
 License
 -------
-This is a modified version of AnkiDroid 2.24.1. The changes were made in 2026 and are listed in the commit history.
+This is a modified version of AnkiDroid 2.25.1. The changes were made in 2026 and are listed in the commit history.
 
 * [GPL-3.0 License](COPYING), like AnkiDroid
 * [AGPL-3.0 License](https://github.com/ankitects/anki/blob/main/LICENSE) for some part of the back-end

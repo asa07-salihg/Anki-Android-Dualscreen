@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2023 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki
 
@@ -32,16 +18,32 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import kotlin.coroutines.resume
 
 class AndroidTtsPlayer(
     private val voices: List<TtsVoice>,
+    /** Builds a [TextToSpeech] bound to an engine package. Overridable for testing */
+    private val ttsFactory: suspend (engine: String) -> TextToSpeech? = { engine -> TtsVoices.createTts(engine) },
 ) : TtsPlayer() {
     private lateinit var scope: CoroutineScope
 
-    // this can be null in the case that TTS failed to load
-    private var tts: TextToSpeech? = null
+    /**
+     * [TextToSpeech] instances keyed by engine package name (#18737).
+     *
+     * Lazily populated as voices from new engines are played ([getOrCreateTts]) and disposed of in
+     * [close]. A present key means the engine was already attempted; a `null` value means it failed
+     * to initialise and is not retried for the rest of the session.
+     */
+    private val ttsByEngine = HashMap<String, TextToSpeech?>()
+
+    /** Guards [ttsByEngine] against concurrent initialisation */
+    private val ttsMutex = Mutex()
+
+    /** The engine which is currently (or was most recently) speaking */
+    private var currentTts: TextToSpeech? = null
 
     /** Flyweight pattern for an empty bundle */
     private val bundleFlyweight = Bundle()
@@ -51,44 +53,71 @@ class AndroidTtsPlayer(
     private val cancelledUtterances = HashSet<String>()
     private var currentUtterance: String? = null
 
+    /** Shared across every engine instance: playback is serialized, so a single channel suffices */
+    private val utteranceProgressListener =
+        object : UtteranceProgressListenerCompat() {
+            override fun onStart(utteranceId: String?) {
+                // handle calling .stopPlaying() BEFORE onStart() is called
+                if (cancelledUtterances.remove(utteranceId) && currentUtterance == utteranceId) {
+                    Timber.d("immediately stopped playing %s", utteranceId)
+                    currentTts?.stopPlaying()
+                }
+            }
+
+            override fun onDone(utteranceId: String?) {
+                scope.launch(Dispatchers.IO) { ttsCompletedChannel.send(TtsCompletionStatus.success()) }
+            }
+
+            override fun onStop(
+                utteranceId: String?,
+                interrupted: Boolean,
+            ) {
+                scope.launch(Dispatchers.IO) { ttsCompletedChannel.send(TtsCompletionStatus.stopped()) }
+            }
+
+            override fun onError(
+                utteranceId: String?,
+                errorCode: Int,
+            ) {
+                val error = AndroidTtsError.fromErrorCode(errorCode)
+                scope.launch(Dispatchers.IO) { ttsCompletedChannel.send(TtsCompletionStatus.failure(error)) }
+            }
+        }
+
     suspend fun init(scope: CoroutineScope) {
         this.scope = scope
-        this.tts =
-            TtsVoices.createTts()?.apply {
-                setOnUtteranceProgressListener(
-                    object : UtteranceProgressListenerCompat() {
-                        override fun onStart(utteranceId: String?) {
-                            // handle calling .stopPlaying() BEFORE onStart() is called
-                            if (cancelledUtterances.remove(utteranceId) && currentUtterance == utteranceId) {
-                                Timber.d("immediately stopped playing %s", utteranceId)
-                                stopPlaying()
-                            }
-                        }
-
-                        override fun onDone(utteranceId: String?) {
-                            scope.launch(Dispatchers.IO) { ttsCompletedChannel.send(TtsCompletionStatus.success()) }
-                        }
-
-                        override fun onStop(
-                            utteranceId: String?,
-                            interrupted: Boolean,
-                        ) {
-                            scope.launch(Dispatchers.IO) { ttsCompletedChannel.send(TtsCompletionStatus.stopped()) }
-                        }
-
-                        override fun onError(
-                            utteranceId: String?,
-                            errorCode: Int,
-                        ) {
-                            val error = AndroidTtsError.fromErrorCode(errorCode)
-                            scope.launch(Dispatchers.IO) { ttsCompletedChannel.send(TtsCompletionStatus.failure(error)) }
-                        }
-                    },
-                )
-            }
+        // Eagerly warm the default engine so the common case has no first-play latency.
+        // Other engines are created lazily on first use.
+        // TODO(#18737): warming here blocks player readiness on TextToSpeech init; revisit so the
+        //  user does not wait (e.g. warm off the critical path, or make it fully lazy).
+        TtsVoices.ttsEngine?.let { defaultEngine -> getOrCreateTts(defaultEngine) }
     }
 
-    override fun getAvailableVoices(): List<TtsVoice> = this.voices
+    // Prefer installed voices for language fallback without changing the shared matcher.
+    // Keep uninstalled voices selectable: an explicit request can trigger their download.
+    override fun getAvailableVoices(): List<TtsVoice> = voices.sortedBy { it.unavailable() }
+
+    /**
+     * Returns a ready [TextToSpeech] bound to [engine], creating and caching one if necessary.
+     *
+     * @return the engine's [TextToSpeech], or `null` if initialisation failed
+     */
+    private suspend fun getOrCreateTts(engine: String): TextToSpeech? =
+        ttsMutex.withLock {
+            // A present key means the engine was already attempted; a null value means it failed
+            // to initialise and must not be retried again this session
+            if (ttsByEngine.containsKey(engine)) {
+                return@withLock ttsByEngine[engine]
+            }
+
+            val tts = ttsFactory(engine)?.apply { setOnUtteranceProgressListener(utteranceProgressListener) }
+            if (tts == null) {
+                Timber.w("Failed to initialize TTS engine: %s", engine)
+            }
+            // cache the result, including a null failure, so a broken engine is not re-initialised
+            ttsByEngine[engine] = tts
+            tts
+        }
 
     override suspend fun play(tag: TTSTag): TtsCompletionStatus {
         val match = voiceForTag(tag)
@@ -111,19 +140,26 @@ class AndroidTtsPlayer(
     private suspend fun play(
         tag: TTSTag,
         voice: AndroidTtsVoice,
-    ): TtsCompletionStatus =
-        suspendCancellableCoroutine { continuation ->
-            val tts =
-                tts?.also {
-                    it.voice = voice.voice
-                    tag.speed?.let { speed ->
-                        if (it.setSpeechRate(speed) == ERROR) {
-                            return@suspendCancellableCoroutine continuation.resume(AndroidTtsError.SpeechRateFailed)
-                        }
-                    }
-                    // if it's already playing: stop it
-                    it.stopPlaying()
-                } ?: return@suspendCancellableCoroutine continuation.resume(AndroidTtsError.InitFailed)
+    ): TtsCompletionStatus {
+        // route to the engine which owns the voice (#18737)
+        val tts =
+            getOrCreateTts(voice.engine)
+                ?: return TtsCompletionStatus.failure(AndroidTtsError.InitFailed)
+
+        return suspendCancellableCoroutine { continuation ->
+            // QUEUE_FLUSH only flushes the queue of the engine it's called on, so stop any other
+            // engine which may still be speaking to avoid overlapping playback
+            currentTts?.takeIf { it !== tts }?.stopPlaying()
+
+            tts.voice = voice.voice
+            tag.speed?.let { speed ->
+                if (tts.setSpeechRate(speed) == ERROR) {
+                    return@suspendCancellableCoroutine continuation.resume(AndroidTtsError.SpeechRateFailed)
+                }
+            }
+            // if it's already playing: stop it
+            tts.stopPlaying()
+            currentTts = tts
 
             Timber.d("tts text '%s' to be played for locale (%s)", tag.fieldText, tag.lang)
             continuation.ensureActive()
@@ -150,6 +186,7 @@ class AndroidTtsPlayer(
                 )
             }
         }
+    }
 
     companion object {
         private fun TextToSpeech.stopPlaying() {
@@ -170,9 +207,15 @@ class AndroidTtsPlayer(
     }
 
     override fun close() {
-        Timber.d("Disposing of TTS Engine")
-        tts?.stop()
-        tts?.shutdown()
+        Timber.d("Disposing of TTS Engines")
+        // snapshot to avoid concurrent modification if a playback is racing close()
+        // values may be null for engines that failed to initialise
+        for (tts in ttsByEngine.values.toList().filterNotNull()) {
+            tts.stop()
+            tts.shutdown()
+        }
+        ttsByEngine.clear()
+        currentTts = null
     }
 }
 

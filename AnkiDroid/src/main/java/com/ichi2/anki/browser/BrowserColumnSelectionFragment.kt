@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2025 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.browser
 
@@ -23,7 +9,11 @@ import androidx.activity.ComponentDialog
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.StringRes
 import androidx.core.os.BundleCompat
-import androidx.core.os.bundleOf
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat.Type.displayCutout
+import androidx.core.view.WindowInsetsCompat.Type.systemBars
+import androidx.core.view.doOnAttach
+import androidx.core.view.updatePadding
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -39,10 +29,12 @@ import com.ichi2.anki.browser.ColumnUsage.AVAILABLE
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.databinding.DialogBrowserColumnsSelectionBinding
 import com.ichi2.anki.dialogs.DiscardChangesDialog
+import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.model.CardsOrNotes
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.utils.ext.requireParcelable
+import com.ichi2.anki.withProgress
 import dev.androidbroadcast.vbpd.viewBinding
-import kotlinx.coroutines.runBlocking
 import timber.log.Timber
 
 /**
@@ -76,11 +68,9 @@ class BrowserColumnSelectionFragment : DialogFragment(R.layout.dialog_browser_co
     private val onBackPressedDispatcher
         get() = (dialog as ComponentDialog).onBackPressedDispatcher
 
-    private val cardsOrNotes: CardsOrNotes
-        get() =
-            requireNotNull(
-                BundleCompat.getParcelable(requireArguments(), ARG_MODE, CardsOrNotes::class.java),
-            )
+    private val cardsOrNotes: CardsOrNotes by lazy {
+        requireArguments().requireParcelable(ARG_MODE)
+    }
 
     private val discardChangesCallback =
         object : OnBackPressedCallback(enabled = false) {
@@ -110,17 +100,20 @@ class BrowserColumnSelectionFragment : DialogFragment(R.layout.dialog_browser_co
         savedInstanceState: Bundle?,
     ) {
         super.onViewCreated(view, savedInstanceState)
+        applyInsets()
 
-        val (active, available) =
-            if (savedInstanceState == null) {
-                // TODO: runBlocking shouldn't be necessary here.
-                runBlocking { viewModel.previewColumnHeadings(cardsOrNotes) }
-            } else {
-                fun getSavedList(key: String) = BundleCompat.getParcelableArrayList(savedInstanceState, key, ColumnWithSample::class.java)!!
-
-                Pair(getSavedList(STATE_ACTIVE), getSavedList(STATE_AVAILABLE))
+        if (savedInstanceState == null) {
+            launchCatchingTask {
+                val (active, available) =
+                    withProgress {
+                        viewModel.previewColumnHeadings(cardsOrNotes)
+                    }
+                setupRecyclerView(active, available)
             }
-        setupRecyclerView(active, available)
+        } else {
+            fun getSavedList(key: String) = BundleCompat.getParcelableArrayList(savedInstanceState, key, ColumnWithSample::class.java)!!
+            setupRecyclerView(getSavedList(STATE_ACTIVE), getSavedList(STATE_AVAILABLE))
+        }
 
         binding.toolbar.setOnMenuItemClickListener { menuItem ->
             Timber.d("menu item click: %s", menuItem.title)
@@ -151,6 +144,20 @@ class BrowserColumnSelectionFragment : DialogFragment(R.layout.dialog_browser_co
         }
     }
 
+    private fun applyInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.toolbarContainer) { view, insets ->
+            val bars = insets.getInsets(systemBars() or displayCutout())
+            view.updatePadding(left = bars.left, top = bars.top, right = bars.right)
+            insets
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.recyclerView) { view, insets ->
+            val bars = insets.getInsets(systemBars() or displayCutout())
+            view.updatePadding(left = bars.left, right = bars.right, bottom = bars.bottom)
+            insets
+        }
+        binding.root.doOnAttach { ViewCompat.requestApplyInsets(it) }
+    }
+
     override fun setupDialog(
         dialog: Dialog,
         style: Int,
@@ -178,16 +185,7 @@ class BrowserColumnSelectionFragment : DialogFragment(R.layout.dialog_browser_co
                 yieldAll(available.map(::ColumnItem))
             }.toMutableList()
 
-        val callback =
-            object : BrowserColumnSelectionTouchHelperCallback(recyclerViewItems) {
-                override fun clearView(
-                    recyclerView: RecyclerView,
-                    viewHolder: RecyclerView.ViewHolder,
-                ) {
-                    columnAdapter.refreshDataset()
-                }
-            }
-        val itemTouchHelper = ItemTouchHelper(callback)
+        val itemTouchHelper = ItemTouchHelper(BrowserColumnSelectionTouchHelperCallback(recyclerViewItems))
 
         this.columnAdapter =
             BrowserColumnSelectionAdapter(recyclerViewItems).apply {
@@ -239,9 +237,9 @@ class BrowserColumnSelectionFragment : DialogFragment(R.layout.dialog_browser_co
             BrowserColumnSelectionFragment().apply {
                 Timber.d("Building 'Manage columns' dialog for %s mode", cardsOrNotes)
                 arguments =
-                    bundleOf(
-                        ARG_MODE to cardsOrNotes,
-                    )
+                    Bundle().apply {
+                        putParcelable(ARG_MODE, cardsOrNotes)
+                    }
             }
     }
 }

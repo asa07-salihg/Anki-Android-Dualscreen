@@ -1,23 +1,13 @@
-/*
- * Copyright (c) 2025 lukstbit <52494258+lukstbit@users.noreply.github.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 lukstbit <52494258+lukstbit@users.noreply.github.com>
+
 package com.ichi2.anki.dialogs.customstudy
 
 import android.widget.AdapterView
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import anki.scheduler.CustomStudyRequest.Cram.CramKind
+import com.ichi2.anki.dialogs.customstudy.CustomStudyDialog.CustomStudyCardState
 import com.ichi2.anki.libanki.Deck
 import com.ichi2.anki.libanki.DeckId
 
@@ -41,6 +31,19 @@ class CustomStudyViewModel(
     /** Required [DeckId] of the [Deck] for which the custom study session is being built. */
     val deckId: DeckId
         get() = savedStateHandle.get<DeckId>(KEY_DID) ?: error("Deck id was not provided!")
+
+    /*
+     * Translates the user's selection into a specific study type.
+     * This prevents the app from "forgetting" user's choice (e.g., Due Cards)
+     * even if the tag selection screen is skipped.
+     */
+    val selectedKind: CramKind
+        get() =
+            if (selectedCardStateIndex != AdapterView.INVALID_POSITION) {
+                CustomStudyCardState.entries[selectedCardStateIndex].kind
+            } else {
+                CramKind.CRAM_KIND_NEW
+            }
 
     companion object {
         /**

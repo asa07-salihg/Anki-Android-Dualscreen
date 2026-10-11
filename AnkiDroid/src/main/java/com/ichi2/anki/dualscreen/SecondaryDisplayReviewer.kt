@@ -62,13 +62,10 @@ import com.ichi2.anki.Flag
 import com.ichi2.anki.R
 import com.ichi2.anki.ViewerResourceHandler
 import com.ichi2.anki.cardviewer.ViewerCommand
-import com.ichi2.anki.preferences.sharedPrefs
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.reviewer.Binding
 import com.ichi2.anki.reviewer.CardSide
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.roundToInt
 import androidx.appcompat.widget.PopupMenu as AppCompatPopupMenu
 
 class SecondaryDisplayReviewer(
@@ -714,7 +711,7 @@ class SecondaryDisplayReviewer(
 
         private fun showFlagMenu() {
             activity.lifecycleScope.launch {
-                val names = Flag.queryDisplayNames()
+                val names = Flag.queryDisplayNames(root.context)
                 val menu = AppCompatPopupMenu(root.context, flagButton).menu
                 FLAG_COMMANDS.keys.forEach { flag -> menu.add(COLORED_ICONS, flag.code, Menu.NONE, names[flag]).setIcon(flag.drawableRes) }
                 showMenu(root.parent as ViewGroup, menu) { onCommand(FLAG_COMMANDS.getValue(Flag.fromCode(it.itemId))) }

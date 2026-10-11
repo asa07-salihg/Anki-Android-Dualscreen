@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2025 lukstbit <52494258+lukstbit@users.noreply.github.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 lukstbit <52494258+lukstbit@users.noreply.github.com>
 
 package com.ichi2.anki.filtered
 
@@ -25,6 +12,7 @@ import anki.decks.filteredDeckForUpdate
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.Flag
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.exception.InvalidSearchException
 import com.ichi2.anki.flagCardForNote
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.libanki.Note
@@ -204,6 +192,21 @@ class FilteredDeckOptionsViewModelTest : RobolectricTest() {
         }
 
     @Test
+    fun `invalid search in browser produces state with error`() =
+        runTest {
+            withViewModel {
+                onSearchChange(FilterIndex.First, "\"deck:A is:new")
+                onSearchInBrowser(FilterIndex.First)
+                val currentState = state.value
+                assertInstanceOf<FilteredDeckOptions>(currentState)
+                assertNotNull(currentState.throwable)
+                assertInstanceOf<InvalidSearchException>(currentState.throwable)
+                assertNull(currentState.browserQuery)
+                clearError()
+            }
+        }
+
+    @Test
     fun `invalid limit inputs produce expected state`() =
         runTest {
             withViewModel {
@@ -375,9 +378,84 @@ class FilteredDeckOptionsViewModelTest : RobolectricTest() {
             }
         }
 
+    @Test
+    fun `name validation still works after the screen is restored`() =
+        runTest {
+            addDeck("A")
+            withRestoredViewModel {
+                onDeckNameChange("A")
+                assertThat(current.nameInputError, equalTo(FilteredNameInputError.AlreadyExists))
+                assertFalse(current.isBuildingAllowed)
+            }
+        }
+
+    @Test
+    fun `changed status still works after the screen is restored`() =
+        runTest {
+            addDeck("A")
+            withRestoredViewModel {
+                assertFalse(hasUnsavedChanges.value)
+                onSearchChange(FilterIndex.First, "flag:3")
+                assertTrue(hasUnsavedChanges.value)
+            }
+        }
+
+    @Test
+    fun `changes made before the screen is restored are still reported`() =
+        runTest {
+            addDeck("A")
+            withRestoredViewModel(
+                beforeDestroy = { onSearchChange(FilterIndex.First, "flag:3") },
+            ) {
+                assertTrue(hasUnsavedChanges.value)
+            }
+        }
+
+    @Test
+    fun `reverting to the deck's own name is not a duplicate`() =
+        runTest {
+            val testDid = createTestFilteredDeck()
+            withViewModel(did = testDid) {
+                onDeckNameChange("Not")
+                onDeckNameChange("Filtered")
+                assertNull(current.nameInputError)
+                assertTrue(current.isBuildingAllowed)
+            }
+        }
+
     /** Returns the current state as a [FilteredDeckOptions] or throw otherwise */
     private val FilteredDeckOptionsViewModel.current: FilteredDeckOptions
         get() = state.value as FilteredDeckOptions
+
+    /**
+     * Builds a view model and invokes [beforeDestroy] on it, then discards it and builds a second
+     * one over the same [SavedStateHandle], simulating the view model being destroyed while its
+     * saved state survives.
+     */
+    private fun TestScope.withRestoredViewModel(
+        did: DeckId = 0,
+        beforeDestroy: FilteredDeckOptionsViewModel.() -> Unit = {},
+        action: FilteredDeckOptionsViewModel.() -> Unit,
+    ) {
+        val handle =
+            SavedStateHandle().apply {
+                set(FilteredDeckOptionsFragment.ARG_DECK_ID, did)
+                set(FilteredDeckOptionsFragment.ARG_SEARCH, null as String?)
+                set(FilteredDeckOptionsFragment.ARG_SEARCH_2, null as String?)
+            }
+        FilteredDeckOptionsViewModel(handle).apply {
+            advanceUntilIdle()
+            advanceRobolectricLooper()
+            beforeDestroy()
+        }
+        advanceUntilIdle()
+        advanceRobolectricLooper()
+
+        val restoredViewModel = FilteredDeckOptionsViewModel(handle)
+        advanceUntilIdle()
+        advanceRobolectricLooper()
+        restoredViewModel.action()
+    }
 
     private fun TestScope.withViewModel(
         did: DeckId = 0,

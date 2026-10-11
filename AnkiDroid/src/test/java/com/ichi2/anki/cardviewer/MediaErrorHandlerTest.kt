@@ -1,5 +1,4 @@
 /*
- *  Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
  *  Copyright (c) 2021 Kael Madar <itsybitsyspider@madarhome.com>
  *
  *  This program is free software; you can redistribute it and/or modify it under
@@ -81,6 +80,24 @@ class MediaErrorHandlerTest {
     }
 
     @Test
+    fun callAfterFlipSameImageIsIgnored() {
+        processFailure(getValidRequest("example.jpg"))
+        sut.onCardSideChange()
+        processFailure(getValidRequest("example.jpg"))
+        assertThat(timesCalled, equalTo(1))
+        assertThat(fileNames, contains("example.jpg"))
+    }
+
+    @Test
+    fun callAfterFlipDuplicateDoesNotHideDifferentImage() {
+        processFailure(getValidRequest("example.jpg"))
+        sut.onCardSideChange()
+        processFailure(getValidRequest("example.jpg"))
+        processFailure(getValidRequest("example2.jpg"))
+        assertThat(fileNames, contains("example.jpg", "example2.jpg"))
+    }
+
+    @Test
     fun thirdCallIsIgnored() {
         processFailure(getValidRequest("example.jpg"))
         sut.onCardSideChange()
@@ -116,6 +133,23 @@ class MediaErrorHandlerTest {
     fun uiFailureDoesNotCrash() {
         processFailure(getValidRequest("example.jpg")) { throw RuntimeException("expected") }
         assertThat("Irrelevant assert to stop lint warnings", timesCalled, equalTo(0))
+    }
+
+    @Test
+    fun imageIsNotRememberedWhenUiFails() {
+        processFailure(getValidRequest("example.jpg")) { throw RuntimeException("expected") }
+        sut.onCardSideChange()
+        processFailure(getValidRequest("example.jpg"))
+        assertThat(fileNames, contains("example.jpg"))
+    }
+
+    @Test
+    fun repeatedMissingSoundOnSameSideIsShown() {
+        val handler = defaultHandler()
+        repeat(3) {
+            processMissingMedia(File("example.wav"), handler)
+        }
+        assertThat(fileNames, contains("example.wav", "example.wav", "example.wav"))
     }
 
     @Test

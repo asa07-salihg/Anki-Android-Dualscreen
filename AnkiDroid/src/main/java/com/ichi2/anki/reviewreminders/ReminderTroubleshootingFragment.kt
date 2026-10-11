@@ -1,24 +1,11 @@
-/*
- *  Copyright (c) 2026 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.reviewreminders
 
-import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -27,27 +14,42 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.net.toUri
+import androidx.annotation.VisibleForTesting
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat.Type.displayCutout
+import androidx.core.view.WindowInsetsCompat.Type.systemBars
+import androidx.core.view.doOnAttach
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.ichi2.anki.NotificationChannel
 import com.ichi2.anki.R
+import com.ichi2.anki.common.utils.android.getColorFromAttr
 import com.ichi2.anki.databinding.FragmentReminderTroubleshootingBinding
 import com.ichi2.anki.databinding.ItemTroubleshootingCheckBinding
-import com.ichi2.anki.settings.Prefs
+import com.ichi2.anki.requireAnkiActivity
+import com.ichi2.anki.utils.doOnApplyWindowInsets
 import com.ichi2.anki.utils.ext.launchCollectionInLifecycleScope
 import com.ichi2.anki.utils.ext.onWindowFocusChanged
+import com.ichi2.anki.utils.ext.requireParcelable
 import com.ichi2.anki.utils.ext.setBackgroundTint
-import com.ichi2.themes.Themes
-import com.ichi2.utils.Permissions.requestPermissionThroughDialogOrSettings
+import com.ichi2.utils.Permissions
+import com.ichi2.utils.Permissions.attemptToEnableNotifications
+import com.ichi2.utils.Permissions.openAppNotificationsSettingsScreen
+import com.ichi2.utils.TruncatedString
+import com.ichi2.utils.copyToClipboard
 import com.ichi2.utils.dp
 import dev.androidbroadcast.vbpd.viewBinding
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
@@ -73,7 +75,18 @@ class ReminderTroubleshootingFragment : Fragment(R.layout.fragment_reminder_trou
         reminderTroubleshootingViewModelFactory(requireContext())
     }
 
-    private val binding by viewBinding(FragmentReminderTroubleshootingBinding::bind)
+    @VisibleForTesting
+    internal val binding by viewBinding(FragmentReminderTroubleshootingBinding::bind)
+
+    /**
+     * [ScheduleRemindersFragment] can be hosted from multiple activities and must change its UI to accommodate its host
+     * Since this fragment is launched from [ScheduleRemindersFragment], it must also know its host to adjust its UI accordingly.
+     *
+     * @see ScheduleRemindersFragment.FragmentHost
+     */
+    private val host: ScheduleRemindersFragment.FragmentHost by lazy {
+        requireArguments().requireParcelable(ARG_HOST)
+    }
 
     internal val notificationPermissionLauncher: ActivityResultLauncher<String> =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -86,13 +99,58 @@ class ReminderTroubleshootingFragment : Fragment(R.layout.fragment_reminder_trou
     ) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.toolbar.setNavigationOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
+        when (host.toolbarType) {
+            ScheduleRemindersFragment.ToolbarType.EXTERNAL -> setupExternalActivityToolbar()
+            ScheduleRemindersFragment.ToolbarType.INTERNAL_COLLAPSIBLE,
+            ScheduleRemindersFragment.ToolbarType.INTERNAL_NON_COLLAPSIBLE,
+            -> setupInternalFragmentToolbar()
         }
 
         setupSummary()
         setupTroubleshootingChecks()
         setupSettingChangeDetector()
+        setupDebugButton()
+        setupContentInsets()
+    }
+
+    /**
+     * Keeps the toolbar and the end of the scrolled content clear of the system bars and any
+     * display cutout.
+     *
+     * The content renders underneath the bottom bar while scrolling.
+     *
+     * Hosts which show this fragment below a toolbar of their own consume the top inset.
+     */
+    private fun setupContentInsets() {
+        binding.troubleshootingToolbar.doOnApplyWindowInsets { view, insets, initial ->
+            val bars = insets.getInsets(systemBars() or displayCutout())
+            view.updatePadding(left = bars.left, right = bars.right)
+            // Margin must be used to align the icon and the title.
+            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                topMargin = initial.margins.top + bars.top
+            }
+        }
+        binding.scrollView.doOnApplyWindowInsets { view, insets, initial ->
+            val bars = insets.getInsets(systemBars() or displayCutout())
+            view.updatePadding(left = bars.left, right = bars.right, bottom = initial.padding.bottom + bars.bottom)
+        }
+        // the view replaces the reminders list after the insets were dispatched, so request them again
+        binding.root.doOnAttach { ViewCompat.requestApplyInsets(it) }
+    }
+
+    private fun setupExternalActivityToolbar() {
+        binding.troubleshootingToolbar.isVisible = false
+        requireAnkiActivity().apply {
+            // TODO: Move to string resources
+            setToolbarText(title = "Troubleshooting")
+            invalidateMenu()
+        }
+    }
+
+    private fun setupInternalFragmentToolbar() {
+        binding.troubleshootingToolbar.setNavigationOnClickListener {
+            parentFragmentManager.popBackStack()
+        }
     }
 
     private fun setupSummary() {
@@ -110,14 +168,14 @@ class ReminderTroubleshootingFragment : Fragment(R.layout.fragment_reminder_trou
                     SummaryStatus.Warning ->
                         Triple(
                             R.drawable.ic_warning_24,
-                            Themes.getColorFromAttr(context, R.attr.reminderTroubleshootingWarning),
+                            getColorFromAttr(context, R.attr.reminderTroubleshootingWarning),
                             "Reminders may not work correctly.",
                         )
 
                     SummaryStatus.Ok ->
                         Triple(
                             R.drawable.ic_check_circle_24,
-                            Themes.getColorFromAttr(context, R.attr.reminderTroubleshootingOk),
+                            getColorFromAttr(context, R.attr.reminderTroubleshootingOk),
                             "Your reminders should work as expected.",
                         )
                 }
@@ -149,23 +207,52 @@ class ReminderTroubleshootingFragment : Fragment(R.layout.fragment_reminder_trou
     private fun setupSettingChangeDetector() {
         onWindowFocusChanged { hasFocus -> if (hasFocus) viewModel.refreshChecks() }
     }
+
+    private fun setupDebugButton() {
+        binding.copyDebugInfo.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val debugInfo = ReminderLogTree.readReminderLog() + "\n\n" + ReviewRemindersDatabase.dumpContentsToString()
+                requireContext().copyToClipboard(
+                    TruncatedString.from(debugInfo),
+                    failureMessageId = R.string.about_ankidroid_error_copy_debug_info,
+                )
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * Arguments key for specifying the host of this fragment.
+         */
+        private const val ARG_HOST = "arg_host"
+
+        fun newInstance(host: ScheduleRemindersFragment.FragmentHost): ReminderTroubleshootingFragment =
+            ReminderTroubleshootingFragment().apply {
+                arguments =
+                    Bundle().apply {
+                        putParcelable(ARG_HOST, host)
+                    }
+                Timber.i(
+                    "Creating ReminderTroubleshootingFragment with host=%s",
+                    host,
+                )
+            }
+    }
 }
 
 /**
  * Shared factory for [ReminderTroubleshootingViewModel].
  *
  * Lives outside the ViewModel itself to keep the ViewModel free of `Context`. Both
- * [ScheduleReminders] and [ReminderTroubleshootingFragment] use this with
+ * [ScheduleRemindersFragment] and [ReminderTroubleshootingFragment] use this with
  * `by activityViewModels { … }` so they observe a single VM + repository instance.
  */
-internal fun reminderTroubleshootingViewModelFactory(context: Context): ViewModelProvider.Factory {
-    val appContext = context.applicationContext
-    return viewModelFactory {
+internal fun reminderTroubleshootingViewModelFactory(context: Context): ViewModelProvider.Factory =
+    viewModelFactory {
         initializer {
-            ReminderTroubleshootingViewModel(ReminderTroubleshootingRepository(appContext))
+            ReminderTroubleshootingViewModel(ReminderTroubleshootingRepository(context))
         }
     }
-}
 
 private class TroubleshootingChecksAdapter(
     private val getResolveAction: (TroubleshootingCheck) -> ResolveCheckAction?,
@@ -262,6 +349,7 @@ private class TroubleshootingChecksAdapter(
 private fun TroubleshootingCheck.title(): String =
     when (this) {
         is TroubleshootingCheck.NotificationPermission -> "Notification permission"
+        is TroubleshootingCheck.NotificationChannelEnabled -> "Notification channel"
         is TroubleshootingCheck.DoNotDisturbOff -> "Do not disturb"
         is TroubleshootingCheck.UnrestrictedOptimizationEnabled -> "Battery optimization"
         is TroubleshootingCheck.PowerSavingModeOff -> "Power saving mode"
@@ -272,6 +360,7 @@ private fun TroubleshootingCheck.title(): String =
 private fun TroubleshootingCheck.statusName(): String? =
     when (this) {
         is TroubleshootingCheck.NotificationPermission -> if (result == CheckResult.Passed) "Granted" else "Denied"
+        is TroubleshootingCheck.NotificationChannelEnabled -> if (result == CheckResult.Passed) "Enabled" else "Disabled"
         is TroubleshootingCheck.DoNotDisturbOff -> if (result == CheckResult.Passed) "Off" else "On"
         is TroubleshootingCheck.UnrestrictedOptimizationEnabled ->
             when (result) {
@@ -289,6 +378,8 @@ private fun TroubleshootingCheck.explanation(): String? =
     when (this) {
         // no need for an explanation: the 'grant permission' action should be sufficient
         is TroubleshootingCheck.NotificationPermission -> null
+        is TroubleshootingCheck.NotificationChannelEnabled ->
+            if (result.hasIssue) "The review reminder notification channel must be enabled" else null
         is TroubleshootingCheck.DoNotDisturbOff ->
             if (result.hasIssue) "Do Not Disturb may mute reminder notifications" else null
         is TroubleshootingCheck.UnrestrictedOptimizationEnabled ->
@@ -315,8 +406,8 @@ private fun CheckResult.iconRes(): Int =
 
 private fun CheckResult.tintColor(context: Context): Int =
     when (this) {
-        is CheckResult.Passed -> Themes.getColorFromAttr(context, R.attr.reminderTroubleshootingOk)
-        is CheckResult.Warning -> Themes.getColorFromAttr(context, R.attr.reminderTroubleshootingWarning)
+        is CheckResult.Passed -> getColorFromAttr(context, R.attr.reminderTroubleshootingOk)
+        is CheckResult.Warning -> getColorFromAttr(context, R.attr.reminderTroubleshootingWarning)
         is CheckResult.Failed -> context.getColor(android.R.color.holo_red_dark)
         is CheckResult.Loading -> context.getColor(android.R.color.darker_gray)
         is CheckResult.Unavailable -> context.getColor(android.R.color.darker_gray)
@@ -331,29 +422,50 @@ private fun TroubleshootingCheck.resolveAction(): ResolveCheckAction? {
     val context = fragment.requireContext()
 
     // TODO: move labels to string resources
-    fun requestNotificationPermission(): ResolveCheckAction? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
-        return ResolveCheckAction(
+    fun requestNotificationPermission(): ResolveCheckAction? =
+        ResolveCheckAction(
             label = "Grant permission",
             logDescription = "requesting POST_NOTIFICATIONS via system dialog or app settings",
         ) {
-            fragment.requestPermissionThroughDialogOrSettings(
-                activity = fragment.requireActivity(),
-                permission = Manifest.permission.POST_NOTIFICATIONS,
-                permissionRequestedFlag = Prefs::notificationsPermissionRequested,
-                permissionRequestLauncher = fragment.notificationPermissionLauncher,
-            )
+            fragment.attemptToEnableNotifications(fragment.notificationPermissionLauncher)
+        }
+
+    fun requestReminderNotifChannelPermission(): ResolveCheckAction? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+        return ResolveCheckAction(
+            label = "Enable notification channel",
+            logDescription = "opening app notification settings screen",
+        ) {
+            fragment.openAppNotificationsSettingsScreen(highlightedChannel = NotificationChannel.REVIEW_REMINDERS)
         }
     }
 
-    // Opens the full battery optimization list. The user must manually find the app.
-    // For 'full' (non-Play) builds, ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS could be used
-    // with the REQUEST_IGNORE_BATTERY_OPTIMIZATIONS manifest permission for a direct dialog,
-    // but Google Play restricts that permission.
-    fun requestUnrestrictedBackgroundUsage() =
-        ResolveCheckAction(label = "Open battery settings", logDescription = "opening ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS") {
-            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    fun requestUnrestrictedBackgroundUsage(): ResolveCheckAction {
+        fun openBatteryOptimizationList() = context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+
+        return if (Permissions.canRequestIgnoreBatteryOptimizations(context)) {
+            ResolveCheckAction(
+                label = "Disable battery optimization",
+                logDescription = "opening ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+            ) {
+                try {
+                    context.startActivity(
+                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.fromParts("package", context.packageName, null)
+                        },
+                    )
+                } catch (e: ActivityNotFoundException) {
+                    // not all devices can request an exemption
+                    Timber.w(e, "cannot request a battery optimization exemption; opening the list")
+                    openBatteryOptimizationList()
+                }
+            }
+        } else {
+            ResolveCheckAction(label = "Open battery settings", logDescription = "opening ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS") {
+                openBatteryOptimizationList()
+            }
         }
+    }
 
     fun openBatterySaverSettings() =
         ResolveCheckAction(label = "Open battery settings", logDescription = "opening ACTION_BATTERY_SAVER_SETTINGS") {
@@ -365,7 +477,7 @@ private fun TroubleshootingCheck.resolveAction(): ResolveCheckAction? {
         return ResolveCheckAction(label = "Grant permission", logDescription = "opening ACTION_REQUEST_SCHEDULE_EXACT_ALARM") {
             context.startActivity(
                 Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                    data = "package:${context.packageName}".toUri()
+                    data = Uri.fromParts("package", context.packageName, null)
                 },
             )
         }
@@ -373,6 +485,7 @@ private fun TroubleshootingCheck.resolveAction(): ResolveCheckAction? {
 
     return when (this) {
         is TroubleshootingCheck.NotificationPermission -> requestNotificationPermission()
+        is TroubleshootingCheck.NotificationChannelEnabled -> requestReminderNotifChannelPermission()
         is TroubleshootingCheck.DoNotDisturbOff -> null
         is TroubleshootingCheck.UnrestrictedOptimizationEnabled -> requestUnrestrictedBackgroundUsage()
         is TroubleshootingCheck.PowerSavingModeOff -> openBatterySaverSettings()

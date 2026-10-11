@@ -1,34 +1,22 @@
-/*
- * Copyright (c) 2015 Timothy Rae <perceptualchaos2@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2015 Timothy Rae <perceptualchaos2@gmail.com>
 
 package com.ichi2.anki.dialogs
 
 import android.os.Bundle
-import android.os.Message
 import androidx.appcompat.app.AlertDialog
-import androidx.core.os.bundleOf
+import androidx.fragment.app.DialogFragment
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.R
-import com.ichi2.anki.utils.ext.showDialogFragment
+import com.ichi2.anki.dialogs.viewmodel.ExportReadyViewModel.ExportReadyParams
+import com.ichi2.anki.utils.ext.requireString
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
+import timber.log.Timber
 
-class ExportReadyDialog : AsyncDialogFragment() {
+class ExportReadyDialog : DialogFragment() {
     private val exportPath
-        get() = requireArguments().getString(KEY_EXPORT_PATH) ?: error("Missing required argument: exportPath!")
+        get() = requireArguments().requireString(KEY_EXPORT_PATH)
     private val asText: Boolean
         get() = requireArguments().getBoolean(ARG_SHARE_AS_TEXT, false)
 
@@ -36,11 +24,11 @@ class ExportReadyDialog : AsyncDialogFragment() {
         val dialog = AlertDialog.Builder(requireActivity())
 
         dialog
-            .setTitle(notificationTitle)
+            .setTitle(getString(R.string.export_ready_title))
             .positiveButton(R.string.export_choice_save_to) {
                 parentFragmentManager.setFragmentResult(
                     REQUEST_EXPORT_SAVE,
-                    bundleOf(KEY_EXPORT_PATH to exportPath),
+                    Bundle().apply { putString(KEY_EXPORT_PATH, exportPath) },
                 )
             }.negativeButton(R.string.export_choice_share) {
                 parentFragmentManager.setFragmentResult(
@@ -53,42 +41,6 @@ class ExportReadyDialog : AsyncDialogFragment() {
             }
 
         return dialog.create()
-    }
-
-    override val notificationTitle: String
-        get() = res().getString(R.string.export_ready_title)
-
-    override val notificationMessage: String? = null
-
-    override val dialogHandlerMessage: DialogHandlerMessage
-        get() = ExportReadyDialogMessage(exportPath)
-
-    /** Export ready dialog message*/
-    class ExportReadyDialogMessage(
-        private val exportPath: String,
-    ) : DialogHandlerMessage(
-            which = WhichDialogHandler.MSG_EXPORT_READY,
-            analyticName = "ExportReadyDialog",
-        ) {
-        override fun handleAsyncMessage(activity: AnkiActivity) {
-            // we may be called via any AnkiActivity but export is a DeckPicker thing
-            activity
-                .requireDeckPickerOrShowError()
-                ?.showDialogFragment(newInstance(exportPath))
-        }
-
-        override fun toMessage(): Message =
-            Message.obtain().apply {
-                what = this@ExportReadyDialogMessage.what
-                data = bundleOf("exportPath" to exportPath)
-            }
-
-        companion object {
-            fun fromMessage(message: Message): ExportReadyDialogMessage {
-                val exportPath = message.data.getString("exportPath")!!
-                return ExportReadyDialogMessage(exportPath)
-            }
-        }
     }
 
     companion object {
@@ -107,5 +59,28 @@ class ExportReadyDialog : AsyncDialogFragment() {
                     putBoolean(ARG_SHARE_AS_TEXT, asText)
                 }
         }
+    }
+}
+
+/**
+ * Handles the last part of the export process where we show the [ExportReadyDialog] fragment. The
+ * method will either show the dialog if possible or save it to show it later.
+ */
+internal fun AnkiActivity.handleExportReadyRequest(params: ExportReadyParams) {
+    runCatching {
+        Timber.i("Attempting to show ExportReadyDialog...")
+        val dialog = ExportReadyDialog.newInstance(params.exportPath, params.asText)
+        dialog.show(supportFragmentManager, "ExportReadyDialog")
+    }.onFailure { exception ->
+        if (exception !is IllegalStateException) throw exception
+        Timber.w(
+            exception,
+            "Failed to show ExportReadyDialog, activity is likely paused.",
+        )
+        // TODO the previous code was showing a notification here which allowed the user to come
+        //  back to the activity, after the main ui refactor see if this is more feasible to implement
+    }.onSuccess {
+        Timber.i("ExportReadyDialog is displayed, clearing any stored requests...")
+        exportReadyViewModel.clearExportReadyRequest()
     }
 }

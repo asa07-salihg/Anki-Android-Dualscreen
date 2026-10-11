@@ -6,43 +6,22 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- generic strings -->
     <string name="disabled">無効</string>
@@ -60,7 +39,6 @@
     <string name="pref_cat_sync" comment="title of the sync preferences category" maxLength="41">同期</string>
     <string name="pref_cat_scheduling" maxLength="41">スケジュール</string>
     <string name="pref_cat_whiteboard" maxLength="41">ホワイトボード機能</string>
-    <string name="pref_cat_appearance" maxLength="41">外観</string>
     <string name="pref_cat_themes" maxLength="41">テーマ</string>
     <string name="pref_cat_gestures" maxLength="41">ジェスチャー</string>
     <string name="pref_cat_controls" maxLength="41">操作</string>
@@ -68,6 +46,15 @@
     <string name="pref_cat_workarounds" maxLength="41">不具合回避策</string>
     <string name="pref_cat_plugins" maxLength="41">プラグイン</string>
     <string name="pref_cat_editing" maxLength="41">編集</string>
+    <string name="pref_cat_security" maxLength="41">セキュリティ</string>
+    <!-- Card template JavaScript API permissions -->
+    <string name="allow_dangerous_js_api_title" maxLength="41">Globally allow dangerous JavaScript APIs</string>
+    <string name="allow_dangerous_js_api_summ">Allows any card or template to read and modify other cards, or your Anki collection data.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="dangerous_js_api_denied_snackbar">Security: Unsafe JavaScript call blocked.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
+    <!-- External-app launching from card content (intent: / android-app: URLs) -->
+    <string name="allow_card_external_launch_title" maxLength="41">Allow cards to launch other apps</string>
+    <string name="allow_card_external_launch_summ">Cards can open other apps on your device, triggering potentially unwanted actions.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="card_external_launch_denied_snackbar">Security: Card blocked from launching another app.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
     <!-- preferences.xml entries-->
     <string name="whiteboard_stroke_width" maxLength="41">線の太さ</string>
     <string name="use_input_tag" maxLength="41">答えを入力する欄をカード内に表示</string>
@@ -128,7 +115,6 @@
     <string name="tts_summ">音声ファイルが含まれていない場合でも、質問と解答を読み上げることができます</string>
     <!-- Sync -->
     <string name="sync_fetch_missing_media" maxLength="41">メディアの同期</string>
-    <string name="sync_account" maxLength="41">AnkiWebアカウント</string>
     <string name="sync_account_summ_logged_out">ログインしていません</string>
     <string name="automatic_sync_choice" maxLength="41">自動同期</string>
     <string name="automatic_sync_choice_summ">最後に同期したのが10分以上前であった場合、アプリ起動/終了時に自動的に同期します</string>
@@ -156,11 +142,9 @@
     <string name="select_locale_title">言語を選択</string>
     <string name="software_render" maxLength="41">カードのハードウェアレンダリングを無効にする</string>
     <string name="software_render_summ">ハードウェアによるレンダリングは高速ですが、問題が発生する可能性があります（特にAndroid 8/8.1において）。 カード学習画面のユーザーインターフェースの一部が表示されない場合は、この設定を試してみてください</string>
-    <string name="safe_display" maxLength="41">安全表示モード</string>
-    <string name="safe_display_summ">アニメーションを無効にし、より不具合が起こりにくい方法でカードを表示します。電子ペーパー端末ではこの設定が必要となる場合があります</string>
-    <string name="disable_extended_text_ui" maxLength="41">単一フィールド編集モードを無効にする</string>
+    <string name="disable_extended_text_ui" maxLength="41">Disable single-field edit mode</string>
     <!--See: multimedia_editor_popup_cloze. We can\'t use format strings as this is auto-generated-->
-    <string name="disable_extended_text_ui_summ">ランドスケープモード時に「穴埋め問題箇所」のコンテキストメニューを許可します</string>
+    <string name="disable_extended_text_ui_summ">Allows \'Cloze deletion\' context menu when in landscape mode.</string>
     <string name="vertical_centering" maxLength="41">上下方向の中央寄せ</string>
     <string name="vertical_centering_summ">コンテンツを上下方向の中央に配置します</string>
     <string name="pref_double_tap_time_interval" maxLength="41">連続タップの最短間隔</string>
@@ -171,6 +155,8 @@
     <string name="show_estimates_summ">次の学習までの時間の間隔を回答ボタンの中に表示します</string>
     <string name="show_large_answer_buttons" maxLength="41">回答ボタンを幅広に表示</string>
     <string name="show_large_answer_buttons_summ">「解答を表示」ボタンの縦幅を２倍にし、回答ボタンを縦２列で表示します</string>
+    <string name="remove_animations" maxLength="41">Remove animations</string>
+    <string name="remove_animations_summary">Also enabled if animations are removed on the system settings</string>
     <string name="show_top_bar" maxLength="41">トップバーを表示</string>
     <string name="show_top_bar_summary">カードの残り枚数、回答時間測定タイマー、フラグ、マークをトップバーに表示する</string>
     <string name="show_progress" maxLength="41">残りのカード枚数を表示</string>
@@ -205,8 +191,6 @@
     <string name="pref_cat_reviewer" maxLength="41">学習画面</string>
     <string name="show_deck_title" maxLength="41">デッキのタイトルを表示</string>
     <string name="accessibility" maxLength="41">アクセシビリティ</string>
-    <!-- Paste clipboard image as png option -->
-    <string name="paste_as_png" maxLength="41">クリップボード画像をPNG形式で貼り付け</string>
     <string name="exit_via_double_tap_back" maxLength="41">学習終了・アプリ終了には「戻る」操作２回</string>
     <string name="exit_via_double_tap_back_summ">学習画面とデッキリスト画面でそれぞれ、意図せず画面を閉じてしまう操作ミスを起こりにくくします</string>
     <!-- Allow all files in media imports -->
@@ -215,7 +199,8 @@
     <!-- Custom sync server settings -->
     <string name="custom_sync_server_title" maxLength="41">同期サーバーのカスタマイズ</string>
     <string name="custom_sync_server_summary_none_of_the_two_servers_used" comment="This summary is shown when neither of the two custom sync servers are used,         which is the default.">指定なし</string>
-    <string name="custom_sync_server_help2"><![CDATA[        AnkiWebと同期する代わりに、
+    <string name="custom_sync_server_help2"><![CDATA[
+        AnkiWebと同期する代わりに、
         あなた自身のサーバーを使用して同期することができます。
         未設定の場合は、AnkiWebサーバーを同期に使用します。
         <a href="%s">Learn more</a>
@@ -246,7 +231,7 @@
     <string name="analytics_title" maxLength="41">設定の情報提供を許可する</string>
     <string name="analytics_summ">各機能の使用傾向を開発チームが把握しやすくなり、AnkiDroidの機能向上に役立ちます</string>
     <string name="note_editor_replace_newlines" maxLength="41">改行タグを改行に置き換えて表示</string>
-    <string name="note_editor_replace_newlines_summ">「ノートを編集」画面のフィールドで、改行を表すHTMLタグ &lt;br&gt; を表示せず、実際に改行に置き換えた状態で表示します。新たに改行を行った場合も、その箇所に &lt;br&gt; タグを挿入しますが、そのタグは表示しません</string>
+    <string name="note_editor_replace_newlines_summ">In the note editor, convert any instances of &lt;br&gt; to newlines when editing a card.</string>
     <string name="type_in_answer_focus" maxLength="41">文字入力欄にフォーカス</string>
     <string name="type_in_answer_focus_summ">答えをキーボード入力するタイプのカードを学習画面に表示したときに、あらかじめ文字入力欄を選択してキーボードを表示した状態にします</string>
     <!-- About -->
@@ -276,6 +261,10 @@
     <string name="user_action_8" maxLength="28">ユーザーアクション 8</string>
     <string name="user_action_9" maxLength="28">ユーザーアクション 9</string>
     <string name="toggle_auto_advance" maxLength="28">カードの自動送りをオン / オフ</string>
+    <string name="enable_auto_advance" maxLength="28">Enable auto advance</string>
+    <string name="disable_auto_advance" maxLength="28">Disable auto advance</string>
+    <string name="enable_voice_recording" maxLength="28">発音チェック機能をオン</string>
+    <string name="disable_voice_recording" maxLength="28">発音チェック機能をオフ</string>
     <!-- Select card side -->
     <string name="card_side_selection_title">カードの表面 (質問側) と裏面 (解答側) 、どちらでの操作ですか？</string>
     <string name="card_side_question">表面</string>
@@ -290,6 +279,8 @@
     <string name="pref_cat_experimental" maxLength="41" tools:ignore="UnusedResources">試験運用機能</string>
     <string name="readtext_deprecation_warn">AnkiDroidは、他のAnkiクライアント（デスクトップ版Anki、AnkiMobile）と互換性がある、より優れたTTS（テキスト読み上げ）システムを導入しました。新システムでは、より多くの音声や、品質の向上した再生機能が利用できます。\n\n従来のTTSシステムを対象とするこのオプションは近い将来に削除され、利用できなくなります。そうなる前に、できるだけ早く、ノートタイプ内のカードテンプレートを新しいTTSシステムに対応したものに変更することをおすすめします。</string>
     <string name="readtext_reviewer_warn" tools:ignore="UnusedResources">テキスト読み上げ（TTS）の新しいフォーマットにアップグレードしてください</string>
+    <string name="allow_templates_to_record_audio" maxLength="41">テンプレートに音声の録音を許可</string>
+    <string name="template_is_trying_to_record_audio">This template is trying to record audio</string>
     <string name="pref_fixed_port_title" maxLength="41">JavaScriptのlocalStorageを有効にする</string>
     <string name="pref_fixed_port_summary">サーバーの固定ポートを使用することによって、学習画面でJavaScriptのlocalStorage機能を使用できるようにします</string>
     <!-- Developer options -->
@@ -300,7 +291,8 @@
     <!-- #######################################################################################
          #################################### Backup options ###################################
          ####################################################################################### -->
-    <string name="pref__backups_help__summary"><![CDATA[        AnkiDroidは一定時間（分）ごとにコレクションのバックアップを作成しています。
+    <string name="pref__backups_help__summary"><![CDATA[
+        AnkiDroidは一定時間（分）ごとにコレクションのバックアップを作成しています。
         各期間（日／週／月）の代表として保管するバックアップ以外のバックアップは、
         ストレージ容量を圧迫しないよう、作成から2日以上経過した後に削除していきます。
         <br><br>
@@ -381,5 +373,5 @@
     <string name="flip_and_answer" maxLength="41" comment="Configuration of the \'Answer\' commands to answer the card if on the answer side, and flip it if on the question side">表面では解答を表示</string>
     <!--Keyboard shortcuts dialog-->
     <string name="open_settings" comment="Description of the shortcut that opens the app settings">設定画面を開く</string>
-    <string name="related_settings_title" comment="Title of the section for related settings">Related settings</string>
+    <string name="related_settings_title" comment="Title of the section for related settings">関連設定</string>
 </resources>

@@ -91,6 +91,9 @@ import com.ichi2.anki.api.Ease
  *                             | Supports query(). For code examples see class description of [Model].
  * --------------------------------------------------------------------------------------------------------------------
  * ```
+ *
+ * If AnkiDroid's storage is not yet configured (the user has not completed first-run setup),
+ * operations on this provider throw [IllegalStateException].
  */
 public object FlashCardsContract {
     public const val AUTHORITY: String = BuildConfig.AUTHORITY
@@ -891,6 +894,22 @@ public object FlashCardsContract {
         public const val LAST_REVIEW_TIME_SECONDS: String = "last_review_time_secs"
 
         /**
+         * The raw flag code in the range from 0 to 7
+         *
+         * * `0` = no flag
+         * * `1` = red
+         * * `2` = orange
+         * * `3` = green
+         * * `4` = blue
+         * * `5` = pink
+         * * `6` = turquoise
+         * * `7` = purple
+         *
+         * Other values will throw IllegalArgumentException on set.
+         */
+        public const val FLAGS: String = "flags"
+
+        /**
          * The content:// style URI for cards. Can be used to search for cards or access specific cards.
          * For examples on how to use the URI for queries see the overview in [FlashCardsContract].
          */
@@ -907,6 +926,7 @@ public object FlashCardsContract {
                 DECK_ID,
                 QUESTION,
                 ANSWER,
+                FLAGS,
             )
 
         /**
@@ -978,7 +998,7 @@ public object FlashCardsContract {
      *            |                   |            | com.ichi2.anki.api.Ease.EASE_3.value
      *            |                   |            | com.ichi2.anki.api.Ease.EASE_4.value
      * --------------------------------------------------------------------------------------------------------------------
-     * String     | TIME_TAKEN        | write_only | The it took to answer the card (in milliseconds). Used when answering the card.
+     * String     | TIME_TAKEN        | write_only | The time it took to answer the card (in milliseconds). Used when answering the card.
      * --------------------------------------------------------------------------------------------------------------------
      * int        | BURY              | write-only | Set to 1 to bury the card. Mutually exclusive with setting EASE/TIME_TAKEN/SUSPEND
      * --------------------------------------------------------------------------------------------------------------------

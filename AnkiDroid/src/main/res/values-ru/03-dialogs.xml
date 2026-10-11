@@ -6,46 +6,24 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="check_db_warning">This may take a long time. Proceed?</string>
-    <string name="contextmenu_deckpicker_delete_deck" maxLength="28">Удалить колоду</string>
+    <string name="check_db_warning">Это может занять много времени. Продолжить?</string>
     <string name="delete_deck_title">Удалить колоду?</string>
     <plurals name="delete_deck_message">
         <item quantity="one">Удалить все карточки в %1$s? В ней %2$d карточка</item>
@@ -74,7 +52,7 @@
     <string name="custom_study_new_extend">Увеличить или уменьшить («-3») лимит новых на сегодня</string>
     <string name="custom_study_rev_extend">Увеличить или уменьшить («-3») лимит повторяемых на сегодня</string>
     <string name="custom_study_forgotten">Забытые за сколько дней повторить:</string>
-    <string name="custom_study_ahead">На сколько дней опередить повторение:</string>
+    <string name="custom_study_ahead_description">Review cards due in the next:</string>
     <string name="custom_study_preview">Посмотреть новые за сколько дней:</string>
     <string name="custom_study_tags">Выберите количество карточек:</string>
     <string name="storage_full_title">Хранилище заполнено</string>
@@ -96,6 +74,7 @@
     <string name="dialog_exit" comment="Label for a button which will exit/finish the current screen">Выйти</string>
     <string name="dialog_continue">Продолжить</string>
     <string name="dialog_processing">Обработка&#8230;</string>
+    <string name="dialog_allow">Allow</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">Создать</string>
     <string name="dialog_positive_delete" maxLength="28">Удалить</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -108,10 +87,10 @@
     <string name="dialog_invalid_custom_certificate_title">Ошибка при обработке сертификата</string>
     <string name="dialog_updated_custom_certificate">Сертификат обновлён</string>
     <!-- Media checking -->
-    <string name="check_media_warning">This may take a long time with large media collections. Proceed?</string>
+    <string name="check_media_warning">Это может занять много времени с большими коллекциями медиа. Продолжить?</string>
     <string name="check_media_message">Медиафайлы проверяются&#8230;</string>
     <string name="check_media_adding_missing_tag">Добавление меток&#8230;</string>
-    <string name="check_media_tags_added">Метки добавлены</string>
+    <string name="check_media_tags_added">Tagging results</string>
     <string name="delete_media_message">Медиафайлы 
 удаляются&#8230;</string>
     <string name="delete_media_result_title">Результат удаления</string>
@@ -133,7 +112,7 @@
     <!-- Multimedia - Audio View -->
     <string name="multimedia_editor_audio_permission_denied">Не удалось получить разрешение на запись звука</string>
     <string name="permission_denied">Доступ запрещен</string>
-    <string name="recording_permission_denied_message">Доступ к микрофону необходим для \"Записи голоса\". Предоставьте доступ в настройках приложения.</string>
+    <string name="microphone_permission_denied_message">Microphone permission denied. Please grant it in the app settings.</string>
     <!-- Database Integrity Check -->
     <string name="integrity_check_continue_anyway">Всё равно продолжить</string>
     <string name="integrity_check_insufficient_space">Проверка базы данных использует большое количество временного хранилища.\n\nЖелательно иметь по крайней мере %s свободного места на вашем устройстве, прежде чем продолжить.</string>
@@ -291,9 +270,16 @@
     <string name="special_field_front_side_help">Содержимое лица. Аудио не проигрывается автоматически</string>
     <string name="special_field_deck_help" comment="%s: either blank or \' %s\'">Колода карточки, включая родительские колоды%s</string>
     <string name="special_field_subdeck_help" comment="%s: either blank or \' %s\'">Текущая колода карточки, исключая родительские колоды%s</string>
-    <string name="special_field_flag_help">Outputs ‘%1$s’, where %2$s is the flag code (%3$s\–%4$s\)</string>
+    <string name="special_field_flag_help">Вывод ‘%1$s’, где %2$s является кодом флага (%3$s\–%4$s\)</string>
     <string name="special_field_tags_help" comment="%s: either blank or \' %s\'">Метки записи%s</string>
     <string name="special_field_card_id_help" comment="%s: either blank or \' %s\'">ID карточки%s</string>
     <string name="special_field_card_help" comment="%s: either blank or \' %s\'">Название шаблона карточки%s</string>
     <string name="special_field_type_help" comment="%s: either blank or \' %s\'">Название типа записи%s</string>
+    <!-- Change Note Type Dialog -->
+    <string name="change_note_type_from" comment="Label indicating the original note type before changing it">From</string>
+    <string name="change_note_type_to" comment="Label indicating the new note type to change to">To</string>
+    <!-- Add profile dialog -->
+    <string name="profile_name" comment="Label of the text field where the user types the name of a new profile">Profile name</string>
+    <string name="profile_name_empty_error" comment="Error shown when the user leaves the profile name empty">Profile name can’t be empty</string>
+    <string name="profile_name_too_long_error" comment="Error shown when a profile name exceeds the maximum length. %1$d is the maximum number of characters">Profile name must be %1$d characters or fewer</string>
 </resources>

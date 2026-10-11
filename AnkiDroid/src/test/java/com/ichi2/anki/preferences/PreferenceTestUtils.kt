@@ -1,18 +1,5 @@
-/*
- Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
+// SPDX-License-Identifier: GPL-3.0-or-later
 
- This program is free software; you can redistribute it and/or modify it under
- the terms of the GNU General Public License as published by the Free Software
- Foundation; either version 3 of the License, or (at your option) any later
- version.
-
- This program is distributed in the hope that it will be useful, but WITHOUT ANY
- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License along with
- this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 package com.ichi2.anki.preferences
 
 import android.content.Context
@@ -120,7 +107,17 @@ object PreferenceTestUtils {
     fun attrToStringArray(
         value: String,
         context: Context,
-    ): Array<String> = context.resources.getStringArray(value.substring(1).toInt())
+    ): Array<String> {
+        if (!value.startsWith("@")) {
+            return arrayOf(value)
+        }
+        val resId = value.substring(1).toInt()
+        return if (context.resources.getResourceTypeName(resId) == "array") {
+            context.resources.getStringArray(resId)
+        } else {
+            arrayOf(context.getString(resId))
+        }
+    }
 
     fun getKeysFromXml(
         context: Context,

@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2025 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.browser
 
@@ -28,6 +14,7 @@ import com.ichi2.anki.browser.BrowserColumnSelectionRecyclerItem.UsageItem
 import com.ichi2.anki.browser.ColumnUsage.AVAILABLE
 import com.ichi2.anki.databinding.ItemBrowserColumnsEntryBinding
 import com.ichi2.anki.databinding.ItemBrowserColumnsHeadingBinding
+import com.ichi2.anki.utils.ext.runWhenNotComputingLayout
 import com.ichi2.anki.utils.ext.swapPositions
 
 class BrowserColumnSelectionAdapter(
@@ -105,12 +92,6 @@ class BrowserColumnSelectionAdapter(
         notifyItemChanged(toPosition)
     }
 
-    fun refreshDataset() {
-        // this needs to be done after onMoved, or the drag operation sometimes completes early
-        // when on a tablet
-        notifyItemRangeChanged(0, items.size)
-    }
-
     fun <T> MutableList<T>.move(
         fromIndex: Int,
         toIndex: Int,
@@ -176,7 +157,7 @@ class BrowserColumnSelectionAdapter(
 /**
  * A [ItemTouchHelper.Callback] for the [BrowserColumnSelectionAdapter].
  */
-open class BrowserColumnSelectionTouchHelperCallback(
+class BrowserColumnSelectionTouchHelperCallback(
     private val items: MutableList<BrowserColumnSelectionRecyclerItem>,
 ) : ItemTouchHelper.Callback() {
     private val movementFlags = makeMovementFlags(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0)
@@ -205,6 +186,17 @@ open class BrowserColumnSelectionTouchHelperCallback(
         items.swapPositions(fromPosition, toPosition)
         recyclerView.adapter?.notifyItemMoved(fromPosition, toPosition)
         return true
+    }
+
+    override fun clearView(
+        recyclerView: RecyclerView,
+        viewHolder: RecyclerView.ViewHolder,
+    ) {
+        super.clearView(recyclerView, viewHolder)
+
+        // this needs to be done after onMoved, or the drag operation sometimes completes early
+        // when on a tablet
+        recyclerView.runWhenNotComputingLayout { recyclerView.adapter?.notifyItemRangeChanged(0, items.size) }
     }
 
     override fun onSwiped(

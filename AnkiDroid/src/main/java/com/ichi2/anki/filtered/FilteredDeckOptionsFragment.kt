@@ -1,25 +1,14 @@
-/*
- * Copyright (c) 2025 lukstbit <52494258+lukstbit@users.noreply.github.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 lukstbit <52494258+lukstbit@users.noreply.github.com>
 
 package com.ichi2.anki.filtered
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.text.InputFilter
+import android.util.TypedValue
 import android.view.MenuItem
 import android.view.View
 import android.widget.AdapterView
@@ -28,8 +17,12 @@ import android.widget.CheckBox
 import android.widget.Spinner
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
-import androidx.core.os.bundleOf
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat.Type.displayCutout
+import androidx.core.view.WindowInsetsCompat.Type.ime
+import androidx.core.view.WindowInsetsCompat.Type.systemBars
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -39,13 +32,15 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import com.ichi2.anki.CardBrowser
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.R
+import com.ichi2.anki.common.destinations.BrowserDestination
+import com.ichi2.anki.common.destinations.navigate
 import com.ichi2.anki.databinding.FragmentFilteredDeckOptionsBinding
 import com.ichi2.anki.dialogs.DiscardChangesDialog
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.utils.ConfigAwareSingleFragmentActivity
+import com.ichi2.anki.utils.ext.window
 import com.ichi2.anki.utils.openUrl
 import com.ichi2.utils.cancelable
 import com.ichi2.utils.configureIconsDirection
@@ -80,6 +75,19 @@ class FilteredDeckOptionsFragment : Fragment(R.layout.fragment_filtered_deck_opt
         savedInstanceState: Bundle?,
     ) {
         super.onViewCreated(view, savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        } else {
+            val typedValue = TypedValue()
+            requireContext().theme.resolveAttribute(android.R.attr.background, typedValue, true)
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = typedValue.data
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.content) { v, insets ->
+            val constraints = insets.getInsets(systemBars() or displayCutout() or ime())
+            v.updatePadding(left = constraints.left, right = constraints.right, top = constraints.top, bottom = constraints.bottom)
+            insets
+        }
         binding.toolbar.apply {
             title = "" // properly set in state updates
             setNavigationOnClickListener {
@@ -151,9 +159,7 @@ class FilteredDeckOptionsFragment : Fragment(R.layout.fragment_filtered_deck_opt
                                 return@collect
                             }
                             if (state.browserQuery != null) {
-                                val browserSearchIntent = Intent(context, CardBrowser::class.java)
-                                browserSearchIntent.putExtra("search_query", state.browserQuery)
-                                startActivity(browserSearchIntent)
+                                navigate(BrowserDestination.Search(query = state.browserQuery, allDecks = false))
                                 viewModel.clearSearchInBrowser()
                             }
                         }
@@ -405,11 +411,11 @@ class FilteredDeckOptionsFragment : Fragment(R.layout.fragment_filtered_deck_opt
                 context = context,
                 fragmentClass = FilteredDeckOptionsFragment::class,
                 arguments =
-                    bundleOf(
-                        ARG_DECK_ID to did,
-                        ARG_SEARCH to search,
-                        ARG_SEARCH_2 to search2,
-                    ),
+                    Bundle().apply {
+                        putLong(ARG_DECK_ID, did)
+                        putString(ARG_SEARCH, search)
+                        putString(ARG_SEARCH_2, search2)
+                    },
             )
     }
 }

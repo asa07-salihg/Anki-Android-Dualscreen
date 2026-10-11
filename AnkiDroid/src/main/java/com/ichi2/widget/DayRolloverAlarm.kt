@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2026 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.widget
 
@@ -24,19 +10,18 @@ import android.content.Intent.ACTION_TIMEZONE_CHANGED
 import android.content.Intent.ACTION_TIME_CHANGED
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.PendingIntentCompat
-import androidx.core.content.getSystemService
 import anki.collection.opChanges
-import com.ichi2.anki.AnkiDroidApp.Companion.applicationScope
 import com.ichi2.anki.CollectionManager.withOpenColOrNull
-import com.ichi2.anki.android.AnkiBroadcastReceiver
+import com.ichi2.anki.common.android.AnkiBroadcastReceiver
+import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.common.exception.ManuallyReportedException
 import com.ichi2.anki.common.time.TimeManager
-import com.ichi2.anki.exception.ManuallyReportedException
 import com.ichi2.anki.launchCatching
 import com.ichi2.anki.libanki.EpochMilliseconds
 import com.ichi2.anki.libanki.sched.Scheduler
 import com.ichi2.anki.observability.ChangeManager
-import com.ichi2.anki.services.AlarmManagerService
+import com.ichi2.utils.AlarmManagement
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import timber.log.Timber
@@ -87,15 +72,19 @@ class DayRolloverAlarm : AnkiBroadcastReceiver() {
         internal suspend fun scheduleNextInternal(context: Context) {
             val cutoffMs = nextFutureCutoffMs() ?: return
             val pendingIntent = context.buildPendingIntent(ACTION_ROLLOVER) ?: return
-            val alarmManager = context.getSystemService<AlarmManager>() ?: return
             // TODO: This uses setWindow with a 10 minute window, so likely fires at 04:10, rather than 04:00
             // Consider requesting SCHEDULE_EXACT_ALARM,
-            alarmManager.setWindowSafe(
-                type = AlarmManager.RTC_WAKEUP,
-                windowStartMillis = cutoffMs,
-                windowLengthMillis = AlarmManagerService.WINDOW_LENGTH_MS,
-                operation = pendingIntent,
-            )
+            AlarmManagement.useAlarmManager(context) { alarmManager ->
+                alarmManager.setWindow(
+                    AlarmManager.RTC_WAKEUP,
+                    cutoffMs,
+                    AlarmManagement.WINDOW_LENGTH_MS,
+                    pendingIntent,
+                )
+                val delta = (cutoffMs - TimeManager.time.intTimeMS()).milliseconds
+                Timber.i("scheduled day rollover")
+                Timber.d("rollover alarm scheduled for %s (in %s)", Date(cutoffMs), delta)
+            }
         }
 
         /**
@@ -121,26 +110,6 @@ class DayRolloverAlarm : AnkiBroadcastReceiver() {
                 false,
             )
     }
-}
-
-/**
- * [AlarmManager.setWindow] implementation which catches exceptions.
- */
-private fun AlarmManager.setWindowSafe(
-    type: Int,
-    windowStartMillis: EpochMilliseconds,
-    windowLengthMillis: Long,
-    operation: PendingIntent,
-) = try {
-    setWindow(type, windowStartMillis, windowLengthMillis, operation)
-    val delta = (windowStartMillis - TimeManager.time.intTimeMS()).milliseconds
-    Timber.i("scheduled day rollover")
-    Timber.d("rollover alarm scheduled for %s (in %s)", Date(windowStartMillis), delta)
-} catch (e: SecurityException) {
-    // #6332 - Too Many Alarms on Samsung Devices
-    Timber.w(e, "too many alarms — could not schedule alarm")
-} catch (e: Exception) {
-    Timber.w(e, "failed to schedule alarm")
 }
 
 /**

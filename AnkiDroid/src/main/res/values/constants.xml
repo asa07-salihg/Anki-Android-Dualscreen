@@ -77,6 +77,7 @@
     <string-array name="day_theme_labels">
         <item>@string/day_theme_light</item>
         <item>@string/day_theme_plain</item>
+        <item>@string/day_theme_eink</item>
     </string-array>
     <string-array name="night_theme_labels">
         <item>@string/night_theme_black</item>
@@ -116,7 +117,7 @@
     <string name="link_manual_ar">https://docs.ankidroid.org/manual-ar.html</string>
     <string name="link_manual_note_format_toolbar">https://docs.ankidroid.org/manual.html#noteFormattingToolbar</string>
     <string name="link_manual_browser_find_replace">https://docs.ankiweb.net/browsing.html#find-and-replace</string>
-    <string name="link_sync_conflict_help">https://ankidroid.org/#AnkiWebConflicts</string>
+    <string name="link_sync_conflict_help">https://docs.ankidroid.org/#AnkiWebConflicts</string>
     <string name="link_user_actions_help">https://docs.ankidroid.org/#userActions</string>
     <string name="link_faq_tts">https://github.com/ankidroid/Anki-Android/wiki/FAQ#tts--text-to-speech-is-not-speaking</string>
     <string name="link_faq_missing_media" tools:ignore="Typos">https://github.com/ankidroid/Anki-Android/wiki/FAQ#why-doesnt-my-sound-or-image-work-on-ankidroid</string>
@@ -178,6 +179,7 @@
     <string name="theme_follow_system_value">0</string>
     <string name="theme_day_scheme_value">1</string>
     <string name="theme_night_scheme_value">2</string>
+    <string name="theme_eink_scheme_value">3</string>
 
     <string name="theme_light_value">1</string>
     <string name="theme_plain_value">2</string>
@@ -192,6 +194,7 @@
     <string-array name="day_theme_values">
         <item>@string/theme_light_value</item>
         <item>@string/theme_plain_value</item>
+        <item>@string/theme_eink_scheme_value</item>
     </string-array>
     <string-array name="night_theme_values">
         <item>@string/theme_black_value</item>
@@ -282,7 +285,6 @@
     </string-array>
 
     <string-array name="sync_summary_entries">
-        <item>@string/sync_account</item>
         <item>@string/automatic_sync_choice</item>
     </string-array>
 
@@ -365,6 +367,9 @@
         <item>android.permission.WRITE_EXTERNAL_STORAGE</item>
     </string-array>
     <string name="post_notification_permission">android.permission.POST_NOTIFICATIONS</string>
+
+    <!-- See LEGACY_POST_NOTIFICATIONS. -->
+    <string name="legacy_post_notification_permission">NOTIFICATIONS_BEFORE_API_33_DUMMY_SENTINEL</string>
     <string name="record_audio_permission">android.permission.RECORD_AUDIO</string>
 
 

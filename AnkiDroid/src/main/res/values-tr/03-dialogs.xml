@@ -6,46 +6,24 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="check_db_warning">Bu uzun sürebilir. Devam etmek ister misin?</string>
-    <string name="contextmenu_deckpicker_delete_deck" maxLength="28">Desteyi sil</string>
     <string name="delete_deck_title">Deste silinsin mi?</string>
     <plurals name="delete_deck_message">
         <item quantity="one">%1$s destesindeki bütün kartlar silinsin mi? İçinde %2$d kart var</item>
@@ -70,7 +48,7 @@
     <string name="custom_study_new_extend">Bugünün yeni kart sınırını şu kadar arttırın/azaltın (“-3”)</string>
     <string name="custom_study_rev_extend">Bugünün gözden geçirme sınırını şu kadar arttırın/azaltın (“-3”)</string>
     <string name="custom_study_forgotten">Son x gündeki unutulan kartları izle:</string>
-    <string name="custom_study_ahead">X günleri önce izle:</string>
+    <string name="custom_study_ahead_description">Şu kadar zaman içinde sırası gelecek kartları çalış:</string>
     <string name="custom_study_preview">Son x günlerdeki eklenen yeni kartları önizle:</string>
     <string name="custom_study_tags">Desteden x kart seç:</string>
     <string name="storage_full_title">Depolama alanı dolu</string>
@@ -92,6 +70,7 @@
     <string name="dialog_exit" comment="Label for a button which will exit/finish the current screen">Çık</string>
     <string name="dialog_continue">Devam Et</string>
     <string name="dialog_processing">İşlem yapılıyor&#8230;</string>
+    <string name="dialog_allow">İzin Ver</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">Oluştur</string>
     <string name="dialog_positive_delete" maxLength="28">Sil</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -107,7 +86,7 @@
     <string name="check_media_warning">Bu, büyük medya koleksiyonlarıyla uzun zaman alabilir. Devam edilsin mi?</string>
     <string name="check_media_message">Medya kontrol ediliyor&#8230;</string>
     <string name="check_media_adding_missing_tag">Etiketler ekleniyor&#8230;</string>
-    <string name="check_media_tags_added">Etiketler eklendi</string>
+    <string name="check_media_tags_added">Etiketleme sonuçları</string>
     <string name="delete_media_message">Medya siliniyor&#8230;</string>
     <string name="delete_media_result_title">Silme sonuçları</string>
     <plurals name="delete_media_result_message">
@@ -126,7 +105,7 @@
     <!-- Multimedia - Audio View -->
     <string name="multimedia_editor_audio_permission_denied">Ses kayıt izni reddedildi</string>
     <string name="permission_denied">İzin reddedildi</string>
-    <string name="recording_permission_denied_message">\"Ses kaydetme\" özelliği için mikrofon izni gereklidir. Lütfen uygulama ayarlarından erişim izni verin.</string>
+    <string name="microphone_permission_denied_message">Mikrofon izni reddedildi. Lütfen uygulama ayarlarından izin verin.</string>
     <!-- Database Integrity Check -->
     <string name="integrity_check_continue_anyway">Yine de devam et</string>
     <string name="integrity_check_insufficient_space">Veritabanı Kontrolü büyük miktarda geçici depolama alanı kullanıyor.\n\nDevam etmeden önce cihazınızda en az %s boş alanın olması şiddetle önerilir.</string>
@@ -279,4 +258,11 @@
     <string name="special_field_card_id_help" comment="%s: either blank or \' %s\'">Kartın ID\'si%s</string>
     <string name="special_field_card_help" comment="%s: either blank or \' %s\'">Kart şablonunun adı%s</string>
     <string name="special_field_type_help" comment="%s: either blank or \' %s\'">Not türünün adı%s</string>
+    <!-- Change Note Type Dialog -->
+    <string name="change_note_type_from" comment="Label indicating the original note type before changing it">Bundan</string>
+    <string name="change_note_type_to" comment="Label indicating the new note type to change to">Buna</string>
+    <!-- Add profile dialog -->
+    <string name="profile_name" comment="Label of the text field where the user types the name of a new profile">Profil adı</string>
+    <string name="profile_name_empty_error" comment="Error shown when the user leaves the profile name empty">Profil adı boş olamaz</string>
+    <string name="profile_name_too_long_error" comment="Error shown when a profile name exceeds the maximum length. %1$d is the maximum number of characters">Profil adı %1$d veya daha az karakter olmalıdır</string>
 </resources>

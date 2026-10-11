@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2026 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.browser.search
 
@@ -39,12 +25,13 @@ import com.ichi2.anki.browser.toUserSpannable
 import com.ichi2.anki.databinding.FragmentStandardSearchBinding
 import com.ichi2.anki.databinding.ViewSavedSearchItemBinding
 import com.ichi2.anki.databinding.ViewSearchHistoryItemBinding
-import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.dialogs.ManageSavedSearchAction
 import com.ichi2.anki.dialogs.SaveBrowserSearchDialogFragment
 import com.ichi2.anki.dialogs.SavedBrowserSearchesDialogFragment
+import com.ichi2.anki.dialogs.registerDeckSelectedHandler
 import com.ichi2.anki.dialogs.registerSaveSearchHandler
 import com.ichi2.anki.dialogs.registerSavedSearchActionHandler
+import com.ichi2.anki.dialogs.startDeckSelection
 import com.ichi2.anki.dialogs.tags.TagsDialog
 import com.ichi2.anki.dialogs.tags.TagsDialogFactory
 import com.ichi2.anki.dialogs.tags.TagsDialogListener
@@ -52,9 +39,9 @@ import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.libanki.DeckNameId
 import com.ichi2.anki.model.CardStateFilter
 import com.ichi2.anki.model.SelectableDeck
+import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.utils.ext.hasCheckedBackground
 import com.ichi2.anki.utils.ext.launchCollectionInLifecycleScope
-import com.ichi2.anki.utils.ext.showDialogFragment
 import dev.androidbroadcast.vbpd.viewBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -62,7 +49,6 @@ import timber.log.Timber
 
 class StandardSearchFragment :
     Fragment(R.layout.fragment_standard_search),
-    DeckSelectionDialog.DeckSelectionListener,
     TagsDialogListener {
     @VisibleForTesting
     val binding by viewBinding(FragmentStandardSearchBinding::bind)
@@ -100,6 +86,8 @@ class StandardSearchFragment :
 
         binding.toggleAdvancedSearch.setOnClickListener { viewModel.toggleAdvancedSearch() }
 
+        registerDeckSelectedHandler(action = ::onDeckSelected)
+
         setupChips()
         setupSearchHistory()
         setupSavedSearches()
@@ -108,31 +96,18 @@ class StandardSearchFragment :
     // TODO: multi-selection handling for all chips
     private fun setupChips() {
         binding.decksChip.setOnClickListener {
-            launchCatchingTask {
-                // TODO: see onDeckSelected
-                val decks = listOf(SelectableDeck.AllDecks) + SelectableDeck.fromCollection(includeFiltered = true)
-                val dialog =
-                    DeckSelectionDialog.newInstance(
-                        title = getString(R.string.search_deck),
-                        summaryMessage = null,
-                        keepRestoreDefaultButton = false,
-                        decks = decks,
-                    )
-                dialog.show(childFragmentManager, "selectDeck")
-            }
+            // TODO: see onDeckSelected
+            startDeckSelection(title = getString(R.string.search_deck), asChild = true, skipEmptyDefault = true)
         }
 
         binding.tagsChip.setOnClickListener {
             // see onSelectedTags
             launchCatchingTask {
-                val dialog =
-                    tagsDialogFactory.newTagsDialog().withArguments(
-                        context = requireContext(),
-                        type = TagsDialog.DialogType.FILTER_BY_TAG,
-                        noteIds = emptyList(),
-                        checkedTags = ArrayList(viewModel.filtersFlow.value.tags),
-                    )
-                showDialogFragment(dialog)
+                tagsDialogFactory.show(
+                    requireActivity(),
+                    type = TagsDialog.DialogType.FILTER_BY_TAG,
+                    checkedTags = ArrayList(viewModel.filtersFlow.value.tags),
+                )
             }
         }
 
@@ -143,7 +118,7 @@ class StandardSearchFragment :
 
         binding.flagsChip.setOnClickListener {
             launchCatchingTask {
-                FlagsBottomSheetFragment.createInstance().show(childFragmentManager)
+                FlagsBottomSheetFragment.createInstance(requireContext()).show(childFragmentManager)
             }
         }
 
@@ -153,19 +128,18 @@ class StandardSearchFragment :
             binding.cardStateChip.hasCheckedBackground = it.cardStates.any()
             binding.flagsChip.hasCheckedBackground = it.flags.any()
 
-            binding.decksChip.text = it.decks.firstOrNull()?.name ?: getString(R.string.card_browser_all_decks)
+            binding.decksChip.text = it.decks.firstOrNull()?.name ?: TR.sentenceCase.allDecks
             binding.tagsChip.text = formatChipDescription(it.tags, emptyValue = "Tags")
             binding.cardStateChip.text = formatChipDescription(it.cardStates.map { it.label }, emptyValue = "Card state")
             binding.cardStateChip.chipIcon =
                 ContextCompat.getDrawable(requireContext(), it.cardStates.firstOrNull().iconRes)?.also { drawable ->
                     if (it.cardStates.isEmpty()) {
                         DrawableCompat.setTint(
-                            drawable,
+                            drawable.mutate(),
                             MaterialColors.getColor(requireContext(), androidx.appcompat.R.attr.colorPrimary, 0),
                         )
                     }
                 }
-            binding.cardStateChip.chipIcon = ContextCompat.getDrawable(requireContext(), it.cardStates.firstOrNull().iconRes)
 
             binding.flagsChip.text =
                 formatChipDescription(
@@ -177,7 +151,7 @@ class StandardSearchFragment :
                 ContextCompat.getDrawable(requireContext(), it.flags.firstOrNull().iconRes)?.also { drawable ->
                     if (it.flags.isEmpty()) {
                         DrawableCompat.setTint(
-                            drawable,
+                            drawable.mutate(),
                             MaterialColors.getColor(requireContext(), androidx.appcompat.R.attr.colorPrimary, 0),
                         )
                     }
@@ -185,7 +159,7 @@ class StandardSearchFragment :
         }
     }
 
-    override fun onDeckSelected(deck: SelectableDeck?) {
+    private fun onDeckSelected(deck: SelectableDeck?) {
         viewModel.setDecksFilter(deck?.toDeckNameIdList() ?: return)
     }
 

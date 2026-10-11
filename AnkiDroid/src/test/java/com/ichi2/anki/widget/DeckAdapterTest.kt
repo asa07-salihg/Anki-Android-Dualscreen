@@ -15,13 +15,21 @@
  */
 package com.ichi2.anki.widget
 
+import androidx.recyclerview.widget.RecyclerView
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.DeckPicker
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.deckpicker.DeckFilters
 import com.ichi2.anki.deckpicker.filterAndFlattenDisplay
+import com.ichi2.anki.libanki.DeckId
+import com.ichi2.anki.widgets.DeckAdapter
+import com.ichi2.anki.withDeckPicker
 import org.junit.Test
 import org.junit.runner.RunWith
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 @RunWith(AndroidJUnit4::class)
@@ -47,5 +55,81 @@ class DeckAdapterTest : RobolectricTest() {
         val afterDeck3 = afterDeck2.map { it.withUpdatedDeckId(deck3Id) }
         assertFalse(actual = afterDeck3.first { it.did == deck2Id }.isSelected)
         assertTrue(actual = afterDeck3.first { it.did == deck3Id }.isSelected)
+    }
+
+    @Test
+    fun `selecting a pressed deck does not start a new ripple`() {
+        val initiallySelected = addDeck("Initially selected")
+        val pressedDeck = addDeck("Pressed")
+        col.decks.select(initiallySelected)
+
+        withDeckPicker(deckCount = 0) { deckPicker ->
+            val adapter = deckPicker.deckPickerBinding.decks.adapter as DeckAdapter
+            val pressedRow = deckPicker.deckHolder(pressedDeck).itemView
+            pressedRow.isPressed = true
+            val originalRipple = pressedRow.background
+
+            adapter.updateSelectedDeck(pressedDeck)
+            advanceRobolectricLooperUntil { adapter.currentList.single { it.did == pressedDeck }.isSelected }
+
+            val selectedBackground = deckPicker.deckHolder(pressedDeck).itemView.background
+            // A replacement drawable must not inherit the press and start a second ripple.
+            assertTrue(
+                selectedBackground === originalRipple || android.R.attr.state_pressed !in selectedBackground.state,
+                "Selecting a pressed deck restarted its ripple",
+            )
+        }
+    }
+
+    @Test
+    fun `toggling subdecks preserves the arrow view and updates its icon`() {
+        val parentDeck = addDeck("Parent")
+        addDeck("Parent::Child")
+        col.decks.select(parentDeck)
+
+        withDeckPicker(deckCount = 0) { deckPicker ->
+            val adapter = deckPicker.deckPickerBinding.decks.adapter as DeckAdapter
+            val parent = deckPicker.deckHolder(parentDeck)
+            val changePayloads = mutableListOf<Any?>()
+            adapter.observeItemRangeChanges { _, _, payload -> changePayloads.add(payload) }
+
+            repeat(2) {
+                val wasCollapsed = adapter.currentList.single { it.did == parentDeck }.collapsed
+                parent.binding.deckExpander.performClick()
+                advanceRobolectricLooperUntil {
+                    adapter.currentList.single { it.did == parentDeck }.collapsed != wasCollapsed
+                }
+
+                assertTrue(changePayloads.isNotEmpty())
+                assertTrue(changePayloads.all { it != null }, "A full row update interrupts the arrow ripple")
+                assertSame(parent, deckPicker.deckHolder(parentDeck))
+                assertEquals(
+                    deckPicker.getString(if (wasCollapsed) R.string.collapse else R.string.expand),
+                    parent.binding.deckExpander.contentDescription,
+                )
+                changePayloads.clear()
+            }
+        }
+    }
+
+    private fun DeckPicker.deckHolder(deckId: DeckId): DeckAdapter.ViewHolder {
+        val decks = deckPickerBinding.decks
+        val adapter = decks.adapter as DeckAdapter
+        val position = adapter.currentList.indexOfFirst { it.did == deckId }
+        return decks.findViewHolderForAdapterPosition(position) as DeckAdapter.ViewHolder
+    }
+
+    private fun RecyclerView.Adapter<*>.observeItemRangeChanges(listener: (Int, Int, Any?) -> Unit) {
+        registerAdapterDataObserver(
+            object : RecyclerView.AdapterDataObserver() {
+                override fun onItemRangeChanged(
+                    positionStart: Int,
+                    itemCount: Int,
+                    payload: Any?,
+                ) {
+                    listener(positionStart, itemCount, payload)
+                }
+            },
+        )
     }
 }

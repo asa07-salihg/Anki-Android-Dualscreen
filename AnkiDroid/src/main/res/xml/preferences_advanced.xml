@@ -1,24 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Jordi Chacon <jordi.chacon@gmail.com>
-~ Copyright (c) 2011 Norbert Nagold <norbert.nagold@gmail.com>
-~ Copyright (c) 2012 Kostas Spyropoulos <inigo.aldana@gmail.com>
-~ Copyright (c) 2014 Timothy Rae <perceptualchaos2@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Jordi Chacon <jordi.chacon@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2011 Norbert Nagold <norbert.nagold@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2012 Kostas Spyropoulos <inigo.aldana@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2014 Timothy Rae <perceptualchaos2@gmail.com>
+  -->
 
 <!-- Advanced Preferences -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
@@ -47,11 +36,6 @@
                 android:key="@string/disable_hardware_render_key"
                 android:summary="@string/software_render_summ"
                 android:title="@string/software_render" />
-            <SwitchPreferenceCompat
-                android:defaultValue="false"
-                android:key="@string/safe_display_key"
-                android:summary="@string/safe_display_summ"
-                android:title="@string/safe_display" />
             <SwitchPreferenceCompat
                 android:defaultValue="false"
                 android:key="@string/use_input_tag_key"
@@ -88,6 +72,10 @@
                 android:key="@string/media_import_allow_all_files_key"
                 android:summary="@string/media_import_allow_all_files_summ"
                 android:title="@string/media_import_allow_all_files" />
+            <SwitchPreferenceCompat
+                android:title="@string/allow_templates_to_record_audio"
+                android:key="@string/pref_allow_template_audio_recording"
+                android:defaultValue="false"/>
             <SwitchPreferenceCompat
                 android:title="@string/pref_fixed_port_title"
                 android:key="@string/use_fixed_port_pref_key"

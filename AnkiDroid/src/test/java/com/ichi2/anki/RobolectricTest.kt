@@ -1,23 +1,11 @@
-/*
- * Copyright (c) 2018 Mike Hardy <mike@mikehardy.net>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2018 Mike Hardy <mike@mikehardy.net>
 
 package com.ichi2.anki
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.Intent
@@ -38,6 +26,7 @@ import com.ichi2.anki.RobolectricTest.CollectionStorageMode.IN_MEMORY_NO_FOLDERS
 import com.ichi2.anki.RobolectricTest.CollectionStorageMode.IN_MEMORY_WITH_MEDIA
 import com.ichi2.anki.RobolectricTest.CollectionStorageMode.ON_DISK
 import com.ichi2.anki.common.annotations.UseContextParameter
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.MockTime
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.dialogs.DialogHandler
@@ -51,9 +40,9 @@ import com.ichi2.anki.libanki.testutils.InMemoryCollectionManagerWithMediaFolder
 import com.ichi2.anki.libanki.testutils.TestCollectionManager
 import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.observability.undoableOp
-import com.ichi2.anki.preferences.sharedPrefs
 import com.ichi2.compat.customtabs.CustomTabActivityHelper
 import com.ichi2.testutils.AndroidTest
+import com.ichi2.testutils.NoLiveRobolectricActivitiesRule
 import com.ichi2.testutils.ProductionCollectionManager
 import com.ichi2.testutils.common.FailOnUnhandledExceptionRule
 import com.ichi2.testutils.common.IgnoreFlakyTestsInCIRule
@@ -86,6 +75,10 @@ import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowMediaPlayer
 import timber.log.Timber
 import kotlin.test.assertNotNull
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+import com.ichi2.testutils.Robolectric as RobolectricActivities
 
 open class RobolectricTest :
     AnkiTest,
@@ -114,6 +107,15 @@ open class RobolectricTest :
 
     @get:Rule
     val tempFolder = TemporaryFolder()
+
+    /**
+     * After all `@After` methods, fail if any Robolectric activities are still live.
+     * Retained AppCompat delegates can recreate activities on later night-mode changes.
+     *
+     * Low [Rule.order] so this wraps other rules and always runs after their cleanup.
+     */
+    @get:Rule(order = Int.MIN_VALUE)
+    val noLiveActivities = NoLiveRobolectricActivitiesRule()
 
     override val collectionManager: TestCollectionManager by lazy {
         when (getCollectionStorageMode()) {
@@ -147,7 +149,7 @@ open class RobolectricTest :
                 // W/ShadowLegacyPath: android.graphics.Path#op() not supported yet.
                 .filter("^(?!(W/ShadowLegacyPath|D/LifecycleMonitor)).*$")
 
-        ChangeManager.clearSubscribers()
+        ChangeManager.resetForTesting()
 
         validateRunWithAnnotationPresent()
 
@@ -183,12 +185,12 @@ open class RobolectricTest :
         throwOnShowError = false
         // If you don't clean up your ActivityControllers you will get OOM errors
         for (controller in controllersForCleanup) {
-            Timber.d("Calling destroy on controller %s", controller.get().toString())
             try {
-                controller.destroy()
-            } catch (e: Exception) {
-                // Any exception here is likely because the test code already destroyed it, which is fine
-                // No exception here should halt test execution since tests are over anyway.
+                Timber.d("Closing controller %s", controller.get())
+                RobolectricActivities.closeActivity(controller)
+            } catch (failure: Throwable) {
+                // Let subclass @After methods and other rules finish cleanup before reporting.
+                noLiveActivities.recordCleanupFailure(failure)
             }
         }
         controllersForCleanup.clear()
@@ -272,12 +274,42 @@ open class RobolectricTest :
             Shadows.shadowOf(Looper.getMainLooper()).runToEndOfTasks()
         }
 
+        /**
+         * Advances the main looper until [condition] holds, failing if [timeout] elapses first.
+         *
+         * @throws IllegalStateException [timeout] has elapsed without [condition] being true.
+         */
+        fun advanceRobolectricLooperUntil(
+            timeout: Duration = 10.seconds,
+            lazyMessage: () -> Any = { "condition not met after $timeout" },
+            condition: () -> Boolean,
+        ) {
+            val start = TimeSource.Monotonic.markNow()
+            while (!condition()) {
+                check(start.elapsedNow() < timeout, lazyMessage)
+                // a real sleep, so background threads finish and post to main
+                Thread.sleep(10)
+                // `advanceRobolectricLooper` only drains tasks already on the main looper,
+                // so it can return while a diff is still in flight (as it's on a different thread).
+                advanceRobolectricLooper()
+            }
+            // flush the work triggered by the condition becoming true (e.g. a layout pass)
+            advanceRobolectricLooper()
+        }
+
         @JvmStatic // Using protected members which are not @JvmStatic in the superclass companion is unsupported yet
-        protected fun <T : AnkiActivity?> startActivityNormallyOpenCollectionWithIntent(
+        protected fun <T : Activity?> startActivityNormallyOpenCollectionWithIntent(
             testClass: RobolectricTest,
             clazz: Class<T>?,
             i: Intent?,
-        ): T {
+        ): T = startActivityControllerNormallyOpenCollectionWithIntent(testClass, clazz, i).get()
+
+        @JvmStatic
+        protected fun <T : Activity?> startActivityControllerNormallyOpenCollectionWithIntent(
+            testClass: RobolectricTest,
+            clazz: Class<T>?,
+            i: Intent?,
+        ): ActivityController<T> {
             if (AbstractFlashcardViewer::class.java.isAssignableFrom(clazz!!)) {
                 // fixes 'Don't know what to do with dataSource...' inside Sounds.kt
                 // solution from https://github.com/robolectric/robolectric/issues/4673
@@ -294,7 +326,7 @@ open class RobolectricTest :
                     .visible()
             advanceRobolectricLooper()
             testClass.saveControllerForCleanup(controller)
-            return controller.get()
+            return controller
         }
     }
 
@@ -344,20 +376,39 @@ open class RobolectricTest :
         CollectionManager.emulatedOpenFailure = null
     }
 
+    /**
+     * Emulates a null collection and a `BackendDbLockedException` while [block] runs,
+     * restoring normal collection behavior afterwards.
+     *
+     * @see enableNullCollection
+     */
+    protected inline fun withNullCollection(block: () -> Unit) =
+        try {
+            enableNullCollection()
+            block()
+        } finally {
+            disableNullCollection()
+        }
+
     @Throws(JSONException::class)
     protected fun getCurrentDatabaseNoteTypeCopy(noteTypeName: String): NotetypeJson {
         val collectionModels = col.notetypes
         return collectionModels.byName(noteTypeName)!!.deepClone()
     }
 
-    internal fun <T : AnkiActivity?> startActivityNormallyOpenCollectionWithIntent(
+    internal fun <T : Activity?> startActivityNormallyOpenCollectionWithIntent(
         clazz: Class<T>?,
         i: Intent?,
     ): T = startActivityNormallyOpenCollectionWithIntent(this, clazz, i)
 
-    internal inline fun <reified T : AnkiActivity?> startRegularActivity(): T = startRegularActivity(null)
+    internal fun <T : Activity?> startActivityControllerNormallyOpenCollectionWithIntent(
+        clazz: Class<T>?,
+        i: Intent?,
+    ): ActivityController<T> = startActivityControllerNormallyOpenCollectionWithIntent(this, clazz, i)
 
-    internal inline fun <reified T : AnkiActivity?> startRegularActivity(i: Intent? = null): T =
+    internal inline fun <reified T : Activity?> startRegularActivity(): T = startRegularActivity(null)
+
+    internal inline fun <reified T : Activity?> startRegularActivity(i: Intent? = null): T =
         startActivityNormallyOpenCollectionWithIntent(T::class.java, i)
 
     fun equalFirstField(

@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2025 Eric Li <ericli3690@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 Eric Li <ericli3690@gmail.com>
 
 package com.ichi2.anki.reviewreminders
 
@@ -111,11 +98,11 @@ value class ReviewReminderCardTriggerThreshold(
 
 /**
  * An indicator of whether a review reminders feature is associated with every deck in the user's
- * collection or if it is associated with a single deck. For example, the [ScheduleReminders] fragment
+ * collection or if it is associated with a single deck. For example, the [ScheduleRemindersFragment] fragment
  * can be triggered in either global or deck-specific editing mode. A [ReviewReminder] can be associated
  * with either all decks or a specific deck.
  *
- * This class is marked with @Parcelize so that it can be passed into [ScheduleReminders.getIntent].
+ * This class is marked with @Parcelize so that it can be passed into [ScheduleRemindersFragment.getIntent].
  * This class is marked with @Serializable so that it can be a field of [ReviewReminder]s, which are stored as JSON strings.
  */
 @Serializable
@@ -161,6 +148,9 @@ sealed class ReviewReminderScope : Parcelable {
  * reminders with invalid IDs are never created. This class is annotated
  * with @ConsistentCopyVisibility to ensure copy() is private too and does not leak the constructor.
  *
+ * Edits to instances of this class are not automatically persisted to SharedPreferences;
+ * that functionality is provided by [ReviewRemindersDatabase].
+ *
  * About the old schema migration process:
  *
  * To any developer who changes this class in the future, note that these review reminders are stored
@@ -188,7 +178,7 @@ sealed class ReviewReminderScope : Parcelable {
  * multiple profiles might be active simultaneously.
  * @param latestNotifTime The time at which this review reminder last attempted to fire a routine daily (non-snooze)
  * notification, in epoch milliseconds, or the time at which it was created if no notification has ever been fired.
- * See [shouldImmediatelyFire].
+ * See [latestNotifDelivered].
  * @param onlyNotifyIfNoReviews If true, only notify the user if this scope has not been reviewed today yet.
  */
 @Serializable
@@ -239,11 +229,10 @@ data class ReviewReminder private constructor(
     }
 
     /**
-     * Checks if this review reminder has tried to fire a routine daily (non-snooze) notification in the time between
-     * its latest scheduled firing time and now. If not, this method returns true, indicating that a notification
-     * should be immediately fired for this review reminder.
+     * Checks if this review reminder has successfully attempted to deliver a routine daily (non-snooze)
+     * notification in the time between its latest scheduled firing time and now. If so, this method returns true.
      */
-    fun shouldImmediatelyFire(): Boolean {
+    fun latestNotifDelivered(): Boolean {
         val (hour, minute) = this.time
 
         val currentTimestamp = TimeManager.time.calendar()
@@ -257,7 +246,7 @@ data class ReviewReminder private constructor(
             }
         }
 
-        return latestNotifTime < latestScheduledTimestamp.timeInMillis
+        return latestNotifTime >= latestScheduledTimestamp.timeInMillis
     }
 
     /**

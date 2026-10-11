@@ -386,13 +386,13 @@
         <ImageButton
             android:id="@+id/dualscreen_action_mark"
             style="@style/DualScreenDockButton"
-            android:contentDescription="@string/menu_mark_note"
+            android:contentDescription="@string/dual_screen_mark"
             android:src="@drawable/ic_star_border_white" />
 
         <ImageButton
             android:id="@+id/dualscreen_action_flag"
             style="@style/DualScreenDockButton"
-            android:contentDescription="@string/menu_flag_card"
+            android:contentDescription="@string/dual_screen_flag"
             android:src="@drawable/ic_flag_transparent" />
 
         <ImageButton

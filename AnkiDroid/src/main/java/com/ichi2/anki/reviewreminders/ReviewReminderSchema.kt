@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2026 Eric Li <ericli3690@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2026 Eric Li <ericli3690@gmail.com>
 
 package com.ichi2.anki.reviewreminders
 
@@ -115,6 +102,9 @@ data class ReviewReminderSchemaV2(
 /**
  * Schema migration settings for testing purposes.
  * Consult this as an example of how to save old schemas and define their [ReviewReminderSchema.migrate] methods.
+ * Also see the unit tests for [ReviewRemindersDatabase], where these classes are exercised.
+ * These classes cannot be moved directly to the test file because [ReviewReminderSchema] is a sealed interface,
+ * meaning all implementations of it must be within the same module.
  */
 object TestingReviewReminderMigrationSettings {
     /**

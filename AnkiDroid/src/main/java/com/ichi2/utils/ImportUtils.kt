@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2018 Mike Hardy <mike@mikehardy.net>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2018 Mike Hardy <mike@mikehardy.net>
 
 package com.ichi2.utils
 
@@ -22,29 +9,35 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import android.os.Message
 import android.provider.OpenableColumns
 import androidx.annotation.CheckResult
 import androidx.appcompat.app.AlertDialog
-import androidx.core.os.bundleOf
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.R
+import com.ichi2.anki.common.android.appContext
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.common.exception.ManuallyReportedException
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.compat.CompatHelper
 import com.ichi2.anki.dialogs.DialogHandler
 import com.ichi2.anki.dialogs.DialogHandlerMessage
 import com.ichi2.anki.dialogs.ImportDialog
-import com.ichi2.anki.exception.ManuallyReportedException
 import com.ichi2.anki.onSelectedCsvForImport
 import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.showImportDialog
+import com.ichi2.anki.ui.internationalization.sentenceCase
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.Contract
 import timber.log.Timber
 import java.io.File
+import java.io.FileNotFoundException
+import java.io.InputStream
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.Locale
@@ -169,10 +162,11 @@ object ImportUtils {
                 try {
                     context.cacheDir.withFileNameSafe(filename)
                 } catch (_: SecurityException) {
-                    // Do not log the exception or filename: ACRA / logs must not receive attacker paths (PII).
+                    // Do not log the exception: it may interpolate attacker-controlled paths (PII).
                     Timber.e("Path traversal detected in getFileCachedCopy")
                     return null
                 } catch (_: IllegalArgumentException) {
+                    // Do not log the exception: it may interpolate attacker-controlled paths (PII).
                     Timber.e("Path traversal detected in getFileCachedCopy")
                     return null
                 }
@@ -249,16 +243,18 @@ object ImportUtils {
                 try {
                     context.cacheDir.withFileNameSafe(filename)
                 } catch (_: SecurityException) {
+                    // Do not log the exception: it may interpolate attacker-controlled paths (PII).
                     Timber.e("Path traversal detected in handleContentProviderFile")
-                    return ImportResult.Failure(context.getString(R.string.import_error_handle_exception, "Path traversal blocked"))
+                    return ImportResult.Failure(context.getString(R.string.import_error_handle_exception, "Invalid path"))
                 } catch (_: IllegalArgumentException) {
+                    // Do not log the exception: it may interpolate attacker-controlled paths (PII).
                     Timber.e("Path traversal detected in handleContentProviderFile")
-                    return ImportResult.Failure(context.getString(R.string.import_error_handle_exception, "Path traversal blocked"))
+                    return ImportResult.Failure(context.getString(R.string.import_error_handle_exception, "Invalid path"))
                 }
             val tempOutDir: String = Uri.fromFile(checkFile).encodedPath!!
 
             copyFileToCache(context, importPathUri, tempOutDir).asErrorDetails()?.let { details ->
-                CrashReportService.sendExceptionReport(details.exceptionForReport, "ImportUtils")
+                details.exceptionForReport?.let { CrashReportService.sendExceptionReport(it, "ImportUtils") }
                 return ImportResult.Failure(
                     title = details.buildTitle(context),
                     humanReadableMessage = details.buildHumanReadableMessage(context),
@@ -285,8 +281,6 @@ object ImportUtils {
         private fun isAnkiDatabase(filename: String?): Boolean = filename != null && hasExtension(filename, "anki2")
 
         /**
-         * Returns a path-safe filename for use as a direct child of cacheDir.
-         *
          * Uses the last path segment ([File.name]) so directory components cannot escape the
          * destination. Empty names, `.`, and `..` become `unnamed_file`. Leading dots on a real
          * filename are preserved (e.g. `.hidden.apkg`, `..apkg`).
@@ -364,7 +358,7 @@ object ImportUtils {
         ) {
             // Use applicationScope: IntentHandler calls this and does not have a lifecycleScope
             fun copyDebugInfo(debugInfo: String) =
-                AnkiDroidApp.applicationScope.launch {
+                applicationScope.launch {
                     Timber.i("copying debug info to clipboard")
                     val stringToCopy =
                         buildString {
@@ -373,7 +367,7 @@ object ImportUtils {
                             appendLine(DebugInfoService.getDebugInfo(activity))
                         }
 
-                    AnkiDroidApp.instance.copyToClipboard(stringToCopy)
+                    appContext.copyToClipboard(TruncatedString.from(stringToCopy))
                 }
 
             Timber.d("showImportUnsuccessfulDialog() message %s", failure.humanReadableMessage)
@@ -389,7 +383,7 @@ object ImportUtils {
                         }
                     }
                     if (failure.toDebugInfo() != null) {
-                        negativeButton(R.string.feedback_copy_debug)
+                        negativeButton(text = with(activity) { TR.sentenceCase.copyDebugInfo })
                     }
                 }
             // 'copy' should not close the dialog
@@ -412,13 +406,31 @@ object ImportUtils {
             tempPath: String,
         ): CacheFileResult =
             try {
-                context.contentResolver.openInputStreamSafe(data)?.use { input ->
-                    CompatHelper.compat.copyFile(input, tempPath)
-                    CacheFileResult.Success(tempPath)
+                context.contentResolver.openInputStreamSafe(data)?.let { input ->
+                    copyToCache(input, tempPath)
                 } ?: run {
                     Timber.w("Content provider crashed")
                     CacheFileResult.ContentProviderCrashed
                 }
+            } catch (e: FileNotFoundException) {
+                // The selected file may have been deleted since the provider returned its URI.
+                Timber.w(e, "Import source file is unavailable")
+                CacheFileResult.SourceFileUnavailable(e)
+            } catch (e: Exception) {
+                Timber.w("Could not open import source")
+                CacheFileResult.Error(e)
+            }
+
+        /**
+         * Returns [CacheFileResult.Error] for any [Exception] while copying or closing [input].
+         */
+        private fun copyToCache(
+            input: InputStream,
+            tempPath: String,
+        ): CacheFileResult =
+            try {
+                input.use { CompatHelper.compat.copyFile(it, tempPath) }
+                CacheFileResult.Success(tempPath)
             } catch (e: Exception) {
                 Timber.w("Could not copy file to %s", tempPath)
                 CacheFileResult.Error(e)
@@ -433,6 +445,10 @@ object ImportUtils {
                 val exception: Exception,
             ) : CacheFileResult()
 
+            data class SourceFileUnavailable(
+                val exception: FileNotFoundException,
+            ) : CacheFileResult()
+
             data object ContentProviderCrashed : CacheFileResult()
 
             fun asErrorDetails(): CacheErrorDetails? =
@@ -443,6 +459,11 @@ object ImportUtils {
                             exceptionForReport = exception,
                             userFacingException = exception,
                         )
+                    is SourceFileUnavailable ->
+                        CacheErrorDetails(
+                            exceptionForReport = null,
+                            userFacingException = exception,
+                        )
                     is ContentProviderCrashed ->
                         CacheErrorDetails(
                             exceptionForReport = ManuallyReportedException("Content provider crashed"),
@@ -451,7 +472,7 @@ object ImportUtils {
                 }
 
             data class CacheErrorDetails(
-                val exceptionForReport: Exception,
+                val exceptionForReport: Exception?,
                 val userFacingException: Exception?,
             ) {
                 fun buildTitle(context: Context) = context.getString(R.string.import_error_copy_to_cache_title)
@@ -555,7 +576,7 @@ object ImportUtils {
 
         override fun toMessage(): Message =
             Message.obtain().apply {
-                data = bundleOf("importPath" to importPath)
+                data = Bundle().apply { putString("importPath", importPath) }
                 what = this@CollectionImportReplace.what
             }
 
@@ -578,7 +599,7 @@ object ImportUtils {
 
         override fun toMessage(): Message =
             Message.obtain().apply {
-                data = bundleOf("importPath" to importPath)
+                data = Bundle().apply { putString("importPath", importPath) }
                 what = this@CollectionImportAdd.what
             }
 

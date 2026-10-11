@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2022 Brayan Oliveira <brayandso.dev@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.pages
 
 import android.content.Context
@@ -23,11 +10,10 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import androidx.activity.OnBackPressedCallback
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
+import anki.collection.ComputeParamsProgress
 import anki.collection.OpChanges
-import anki.collection.Progress
 import com.google.android.material.appbar.MaterialToolbar
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
@@ -40,6 +26,7 @@ import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.libanki.updateDeckConfigsRaw
 import com.ichi2.anki.observability.undoableOp
+import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.utils.openUrl
 import com.ichi2.anki.withProgress
 import kotlinx.coroutines.Dispatchers
@@ -213,8 +200,46 @@ class DeckOptions : PageFragment() {
                 // clicking a link to the online manual closes the modal and reloads the page
                 onBackFromModal.isEnabled = false
                 listenToModalShowHideEvents()
+                injectEasyDaysScrollFix()
             }
         }
+    }
+
+    /** HACK(#20929): vertical scrolling no longer changes values, but drag-to-change is disabled */
+    private fun injectEasyDaysScrollFix() {
+        // TODO: Do this properly if not fixed upstream by 2027
+        val js =
+            """
+            (function() {
+                if (document._easyDaysFix) return;
+                document._easyDaysFix = true;
+
+                // disable all touch events
+                const style = document.createElement('style');
+                style.textContent = '.easy-days-settings input[type="range"]{pointer-events:none}';
+                document.head.appendChild(style);
+
+                // re-implement 'click', so the value can still be set
+                document.addEventListener('click', (e) => {
+                    const container = e.target.closest('.easy-days-settings .input-container');
+                    if (!container) return;
+                    const slider = container.querySelector('input[type="range"]');
+
+                    const rect = slider.getBoundingClientRect();
+                    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+
+                    const min = parseFloat(slider.min);
+                    const max = parseFloat(slider.max);
+                    const step = parseFloat(slider.step) || 1;
+                    const newValue = Math.round((min + (max - min) * fraction) / step) * step;
+
+                    if (parseFloat(slider.value) === newValue) return;
+                    slider.value = newValue;
+                    slider.dispatchEvent(new Event('input', { bubbles: true }));
+                });
+            })();
+            """.trimIndent()
+        webViewLayout.evaluateJavascript(js) {}
     }
 
     /**
@@ -248,6 +273,43 @@ class DeckOptions : PageFragment() {
         webViewIsReady = true
         webViewLayout.isVisible = true
         pageLoadingIndicator.isVisible = false
+        setParameterUnlockClickTimeout()
+    }
+
+    /**
+     * The FSRS parameters are locked until they are tapped three times in quick succession.
+     *
+     * Use [Prefs.doubleTapInterval] for this.
+     *
+     * See: https://github.com/ankitects/anki/blob/d036c2ade428b65d47c677bf3887a7402312c5c5/ts/routes/deck-options/ParamsInput.svelte
+     */
+    private fun setParameterUnlockClickTimeout() {
+        val minimumTimeoutMs = Prefs.doubleTapInterval
+        // The setter and default are only defined while `ParamsInput` is mounted, which requires
+        // FSRS to be enabled, and are reassigned each time it mounts.
+        // Intercept the assignments so this functionality works the first time someone enables
+        // FSRS.
+        webViewLayout.evaluateJavascript(
+            """
+            (() => {
+                globalThis.anki ||= {};
+                let setter = globalThis.anki.setParameterUnlockClickTimeoutMs;
+                const apply = () => {
+                    const defaultMs = globalThis.anki.defaultParameterUnlockClickTimeoutMs;
+                    if (setter === undefined || defaultMs === undefined) return;
+                    setter(Math.max(defaultMs, $minimumTimeoutMs));
+                };
+                Object.defineProperty(globalThis.anki, "setParameterUnlockClickTimeoutMs", {
+                    configurable: true,
+                    enumerable: true,
+                    get: () => setter,
+                    // the default is assigned after the setter: defer until both are defined
+                    set: (value) => { setter = value; queueMicrotask(apply); },
+                });
+                apply();
+            })();
+            """.trimIndent(),
+        )
     }
 
     companion object {
@@ -257,7 +319,11 @@ class DeckOptions : PageFragment() {
             context: Context,
             deckId: DeckId,
         ): Intent =
-            SingleFragmentActivity.getIntent(context, fragmentClass = DeckOptions::class, arguments = bundleOf(KEY_DECK_ID to deckId))
+            SingleFragmentActivity.getIntent(
+                context,
+                fragmentClass = DeckOptions::class,
+                arguments = Bundle().apply { putLong(KEY_DECK_ID, deckId) },
+            )
     }
 }
 
@@ -266,7 +332,9 @@ suspend fun FragmentActivity.updateDeckConfigsRaw(input: ByteArray): ByteArray {
         withContext(Dispatchers.Main) {
             withProgress(
                 extractProgress = {
-                    text = this.toOptimizingPresetString() ?: getString(R.string.dialog_processing)
+                    // TODO: Don't use the amount yet, unused as a progress indicator, and
+                    //  duplicates computeMemory's label
+                    text = this.toProgressText() ?: getString(R.string.dialog_processing)
                 },
             ) {
                 withContext(Dispatchers.IO) {
@@ -280,28 +348,39 @@ suspend fun FragmentActivity.updateDeckConfigsRaw(input: ByteArray): ByteArray {
 }
 
 /**
+ * Returns a string indicating progress, such as:
+ *
  * ```
  * Optimizing preset 1/20
  * 5.2% of 1000 reviews
  * ```
  *
- * @return the above string, or `null` if [ProgressContext] has no
- * [compute parameters][Progress.hasComputeParams]
+ * @return the above string, or `null` if a string could not be generated
  */
-private fun ProgressContext.toOptimizingPresetString(): String? {
-    if (!progress.hasComputeParams()) return null
+private fun ProgressContext.toProgressText(): String? =
+    when {
+        progress.hasComputeParams() -> progress.computeParams.toProgressText()
+        progress.hasComputeMemory() -> progress.computeMemory.label // Updating cards: X/Y...
+        else -> null
+    }
 
-    val value = progress.computeParams
+/**
+ * ```
+ * Optimizing preset 1/20
+ * 5.2% of 1000 reviews
+ * ```
+ */
+private fun ComputeParamsProgress.toProgressText(): String {
     val label =
         TR.deckConfigOptimizingPreset(
-            currentCount = value.currentPreset,
-            totalCount = value.totalPresets,
+            currentCount = currentPreset,
+            totalCount = totalPresets,
         )
-    val pct = if (value.total > 0) (value.current.toDouble() / value.total.toDouble() * 100.0) else 0.0
+    val pct = if (total > 0) (current.toDouble() / total.toDouble() * 100.0) else 0.0
     val reviewsLabel =
         TR.deckConfigPercentOfReviews(
             pct = "%.1f".format(pct),
-            reviews = value.reviews,
+            reviews = reviews,
         )
     return label + "\n" + reviewsLabel
 }

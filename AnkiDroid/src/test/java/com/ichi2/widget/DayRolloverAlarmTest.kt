@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2026 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.widget
 
@@ -21,7 +7,7 @@ import android.content.Context
 import androidx.core.content.getSystemService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
-import com.ichi2.anki.services.AlarmManagerService
+import com.ichi2.utils.AlarmManagement
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -59,7 +45,7 @@ class DayRolloverAlarmTest : RobolectricTest() {
                 alarmManager.setWindow(
                     AlarmManager.RTC_WAKEUP,
                     expectedCutoffMs,
-                    AlarmManagerService.WINDOW_LENGTH_MS,
+                    AlarmManagement.WINDOW_LENGTH_MS,
                     any(),
                 )
             }

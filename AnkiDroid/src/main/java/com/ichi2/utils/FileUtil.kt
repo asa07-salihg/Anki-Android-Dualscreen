@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.utils
 
@@ -212,7 +198,6 @@ fun ContentResolver.openInputStreamSafe(uri: Uri): InputStream? {
  * Prevents directory traversal attacks (e.g. "../", symlinks) by verifying canonical paths.
  *
  * @throws SecurityException If the resolved path escapes the parent directory.
- * @throws IllegalArgumentException If a canonical path cannot be resolved.
  */
 fun File.withFileNameSafe(childName: String): File {
     val child = File(this, childName)
@@ -221,11 +206,11 @@ fun File.withFileNameSafe(childName: String): File {
         val canonicalChild = child.canonicalPath
 
         if (!canonicalChild.startsWith(canonicalParent + File.separator)) {
-            // Do not interpolate childName: exception messages are reported to ACRA (PII).
-            throw SecurityException("Invalid path: traversal attempt detected")
+            // Do not put attacker-controlled paths in exception messages (they are reported to ACRA).
+            throw SecurityException("Path traversal detected")
         }
     } catch (e: IOException) {
-        // Do not interpolate childName: exception messages are reported to ACRA (PII).
+        // Do not put attacker-controlled paths in exception messages (they are reported to ACRA).
         throw IllegalArgumentException("Unable to resolve canonical path", e)
     }
     return child

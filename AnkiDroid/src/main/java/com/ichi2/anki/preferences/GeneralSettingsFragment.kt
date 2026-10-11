@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2022 Brayan Oliveira <brayandso.dev@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.preferences
 
 import androidx.appcompat.app.AppCompatDelegate
@@ -21,9 +8,12 @@ import androidx.preference.ListPreference
 import androidx.preference.SwitchPreferenceCompat
 import anki.config.ConfigKey
 import com.ichi2.anki.CollectionManager
+import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.R
 import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.common.utils.ext.AddingDefaultsMode
+import com.ichi2.anki.common.utils.ext.addingDefaultsMode
 import com.ichi2.anki.contextmenu.AnkiCardContextMenu
 import com.ichi2.anki.contextmenu.CardBrowserContextMenu
 import com.ichi2.anki.launchCatchingTask
@@ -31,6 +21,7 @@ import com.ichi2.utils.LanguageUtil
 import com.ichi2.utils.LanguageUtil.getStringByLocale
 import com.ichi2.utils.LanguageUtil.getSystemLocale
 import kotlinx.coroutines.runBlocking
+import timber.log.Timber
 
 class GeneralSettingsFragment : SettingsFragment() {
     override val preferenceResource: Int
@@ -43,22 +34,17 @@ class GeneralSettingsFragment : SettingsFragment() {
         initializeLanguagePref()
 
         // Deck for new cards
-        // Represents in the collections pref "addToCur": i.e.
-        // if true, then add note to current decks, otherwise let the note type's configuration decide
-        // Note that "addToCur" is a boolean while USE_CURRENT is "0" or "1"
         requirePreference<ListPreference>(R.string.deck_for_new_cards_key).apply {
-            launchCatchingTask {
-                val valueIndex = if (withCol { config.getBool(ConfigKey.Bool.ADDING_DEFAULTS_TO_CURRENT_DECK) }) 0 else 1
-                setValueIndex(valueIndex)
-            }
+            launchCatchingTask { value = withCol { config.addingDefaultsMode }.toPreferenceValue() }
             setOnPreferenceChangeListener { newValue ->
-                launchCatchingTask { withCol { config.setBool(ConfigKey.Bool.ADDING_DEFAULTS_TO_CURRENT_DECK, "0" == newValue) } }
+                launchCatchingTask { withCol { config.addingDefaultsMode = newValue.toAddingDefaultsMode() } }
             }
         }
         // Paste PNG
         // Represents in the collection's pref "pastePNG" , i.e.
         // whether to convert clipboard uri to png format or not.
         requirePreference<SwitchPreferenceCompat>(R.string.paste_png_key).apply {
+            title = TR.preferencesPasteClipboardImagesAsPng()
             launchCatchingTask { isChecked = withCol { config.getBool(ConfigKey.Bool.PASTE_IMAGES_AS_PNG) } }
             setOnPreferenceChangeListener { newValue ->
                 launchCatchingTask { withCol { config.setBool(ConfigKey.Bool.PASTE_IMAGES_AS_PNG, newValue) } }
@@ -108,7 +94,17 @@ class GeneralSettingsFragment : SettingsFragment() {
                     }
                 val localeList = LocaleListCompat.forLanguageTags(localeCode)
                 AppCompatDelegate.setApplicationLocales(localeList)
+                Timber.w("Known bug: some strings may be stale after a language change until the app is restarted")
             }
         }
     }
 }
+
+private fun AddingDefaultsMode.toPreferenceValue(): String =
+    when (this) {
+        AddingDefaultsMode.USE_CURRENT_DECK -> "0"
+        AddingDefaultsMode.DECIDE_BY_NOTE_TYPE -> "1"
+    }
+
+private fun String.toAddingDefaultsMode(): AddingDefaultsMode =
+    if (this == "0") AddingDefaultsMode.USE_CURRENT_DECK else AddingDefaultsMode.DECIDE_BY_NOTE_TYPE

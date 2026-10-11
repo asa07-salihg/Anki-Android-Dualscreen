@@ -6,46 +6,24 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="check_db_warning">Isto pode levar moito tempo. Queres continuar?</string>
-    <string name="contextmenu_deckpicker_delete_deck" maxLength="28">Eliminar baralla</string>
     <string name="delete_deck_title">Eliminar baralla?</string>
     <plurals name="delete_deck_message">
         <item quantity="one">Eliminar tódalas tarxetas en %1$s? Contén %2$d tarxeta</item>
@@ -70,7 +48,7 @@
     <string name="custom_study_new_extend">Aumentar/diminuír (“-3”) o límite de novas tarxetas en</string>
     <string name="custom_study_rev_extend">Aumentar/diminuír (\"-3\") o límite de repasos actual en</string>
     <string name="custom_study_forgotten">Repasar as tarxetas esquecidas nos últimos x días:</string>
-    <string name="custom_study_ahead">Repasar con x días de adianto:</string>
+    <string name="custom_study_ahead_description">Repasar as tarxetas pendentes nos vindeiros:</string>
     <string name="custom_study_preview">Amosar as tarxetas novas engadidas nos últimos x días:</string>
     <string name="custom_study_tags">Seleccionar x tarxetas da baralla:</string>
     <string name="storage_full_title">Almacenamento cheo</string>
@@ -92,6 +70,7 @@
     <string name="dialog_exit" comment="Label for a button which will exit/finish the current screen">Saír</string>
     <string name="dialog_continue">Continuar</string>
     <string name="dialog_processing">Procesando&#8230;</string>
+    <string name="dialog_allow">Permitir</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">Crear</string>
     <string name="dialog_positive_delete" maxLength="28">Eliminar</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -107,7 +86,7 @@
     <string name="check_media_warning">Isto pode levar moito tempo con coleccións multimedia grandes. Queres continuar?</string>
     <string name="check_media_message">Verificando multimedia&#8230;</string>
     <string name="check_media_adding_missing_tag">Engadindo etiquetas&#8230;</string>
-    <string name="check_media_tags_added">Etiquetas engadidas</string>
+    <string name="check_media_tags_added">Resultados das etiquetas</string>
     <string name="delete_media_message">Eliminando multimedia&#8230;</string>
     <string name="delete_media_result_title">Resultado da eliminación</string>
     <plurals name="delete_media_result_message">
@@ -126,7 +105,7 @@
     <!-- Multimedia - Audio View -->
     <string name="multimedia_editor_audio_permission_denied">Denegouse o permiso para gravar son</string>
     <string name="permission_denied">Permiso denegado</string>
-    <string name="recording_permission_denied_message">O permiso de micrófono é necesario para a funcionalidade de \"Gravar voz\". Concédeo nos axustes da aplicación.</string>
+    <string name="microphone_permission_denied_message">Denegáronse os permisos de micrófono. Por favor, concédeo na aplicación de axustes.</string>
     <!-- Database Integrity Check -->
     <string name="integrity_check_continue_anyway">Continuar igualmente</string>
     <string name="integrity_check_insufficient_space">Comprobar a base de datos usa unha gran cantidade de espazo temporal.\n\nRecoméndase que teñas polo menos %s de espazo libre no teu dispositivo antes de continuar.</string>
@@ -279,4 +258,11 @@
     <string name="special_field_card_id_help" comment="%s: either blank or \' %s\'">O ID da tarxeta%s</string>
     <string name="special_field_card_help" comment="%s: either blank or \' %s\'">O nome do modelo de tarxeta%s</string>
     <string name="special_field_type_help" comment="%s: either blank or \' %s\'">O nome do tipo de nota%s</string>
+    <!-- Change Note Type Dialog -->
+    <string name="change_note_type_from" comment="Label indicating the original note type before changing it">Desde</string>
+    <string name="change_note_type_to" comment="Label indicating the new note type to change to">Ata</string>
+    <!-- Add profile dialog -->
+    <string name="profile_name" comment="Label of the text field where the user types the name of a new profile">Nome do perfil</string>
+    <string name="profile_name_empty_error" comment="Error shown when the user leaves the profile name empty">O nome do perfil non pode estar baleiro</string>
+    <string name="profile_name_too_long_error" comment="Error shown when a profile name exceeds the maximum length. %1$d is the maximum number of characters">O nome do perfil debe ter %1$d caracteres ou menos</string>
 </resources>

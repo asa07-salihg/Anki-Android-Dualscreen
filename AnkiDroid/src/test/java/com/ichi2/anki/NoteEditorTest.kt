@@ -1,26 +1,18 @@
-/*
- Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
+// SPDX-License-Identifier: GPL-3.0-or-later
 
- This program is free software; you can redistribute it and/or modify it under
- the terms of the GNU General Public License as published by the Free Software
- Foundation; either version 3 of the License, or (at your option) any later
- version.
-
- This program is distributed in the hope that it will be useful, but WITHOUT ANY
- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License along with
- this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 @file:Suppress("SameParameterValue")
 
 package com.ichi2.anki
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipData
 import android.content.Intent
 import android.os.Bundle
+import android.os.Parcel
+import android.os.Parcelable
+import android.util.SparseArray
+import android.view.View
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
@@ -32,11 +24,16 @@ import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import anki.config.ConfigKey
-import com.ichi2.anim.ActivityTransitionAnimation.Direction.DEFAULT
+import anki.notetypes.StockNotetype
+import anki.notetypes.notetypeId
 import com.ichi2.anki.NoteEditorTest.FromScreen.DECK_LIST
 import com.ichi2.anki.NoteEditorTest.FromScreen.REVIEWER
 import com.ichi2.anki.api.AddContentApi.Companion.DEFAULT_DECK_ID
 import com.ichi2.anki.common.annotations.DuplicatedCode
+import com.ichi2.anki.common.destinations.NoteEditorDestination
+import com.ichi2.anki.common.destinations.toBundle
+import com.ichi2.anki.common.destinations.toIntent
+import com.ichi2.anki.common.ui.TransitionDirection.DEFAULT
 import com.ichi2.anki.libanki.Consts
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.libanki.Decks.Companion.CURRENT_DECK
@@ -44,12 +41,14 @@ import com.ichi2.anki.libanki.Note
 import com.ichi2.anki.libanki.NotetypeJson
 import com.ichi2.anki.libanki.testutils.AnkiTest
 import com.ichi2.anki.model.SelectableDeck
-import com.ichi2.anki.noteeditor.NoteEditorLauncher
+import com.ichi2.anki.noteeditor.getNoteEditorFragment
+import com.ichi2.anki.noteeditor.openNoteEditorWithArgs
 import com.ichi2.testutils.getString
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.lessThan
 import org.hamcrest.Matchers.not
 import org.junit.Ignore
 import org.junit.Test
@@ -76,6 +75,49 @@ class NoteEditorTest : RobolectricTest() {
         )
     }
 
+    @Test // #20510
+    fun `editing - fields are refreshed after the template editor restores the note type to default`() {
+        val basic = col.notetypes.byName("Basic")!!
+        col.notetypes.addFieldLegacy(basic, col.notetypes.newField("ThirdField"))
+
+        val editor = getNoteEditorEditingExistingBasicNote("Hello", "World", REVIEWER)
+        assertThat("field count before restore", editor.editFields!!.size, equalTo(3))
+
+        // simulate 'Restore to Default' being performed inside the CardTemplateEditor
+        @SuppressLint("CheckResult")
+        col.notetypes.restoreNotetypeToStock(
+            notetypeId { ntid = basic.id },
+            StockNotetype.Kind.KIND_BASIC,
+        )
+        editor.onTemplateEditorResult()
+
+        assertThat("field count after restore", editor.editFields!!.size, equalTo(2))
+        assertThat(editor.currentFieldStrings.toList(), contains("Hello", "World"))
+    }
+
+    @Test // #20510
+    fun `adding - fields are refreshed after the template editor restores the note type to default`() {
+        val basic = col.notetypes.byName("Basic")!!
+        col.notetypes.addFieldLegacy(basic, col.notetypes.newField("ThirdField"))
+
+        val editor =
+            getNoteEditorAdding(NoteType.BASIC)
+                .withFirstField("Hello")
+                .build()
+        assertThat("field count before restore", editor.editFields!!.size, equalTo(3))
+
+        // simulate 'Restore to Default' being performed inside the CardTemplateEditor
+        @SuppressLint("CheckResult")
+        col.notetypes.restoreNotetypeToStock(
+            notetypeId { ntid = basic.id },
+            StockNotetype.Kind.KIND_BASIC,
+        )
+        editor.onTemplateEditorResult()
+
+        assertThat("field count after restore", editor.editFields!!.size, equalTo(2))
+        assertThat("typed text is preserved", editor.currentFieldStrings[0], equalTo("Hello"))
+    }
+
     @Test
     fun errorSavingNoteWithNoFirstFieldDisplaysNoFirstField() =
         runTest {
@@ -87,6 +129,57 @@ class NoteEditorTest : RobolectricTest() {
             val actualResourceId = noteEditor.snackbarErrorText
             assertThat(actualResourceId, equalTo(CollectionManager.TR.addingTheFirstFieldIsEmpty()))
         }
+
+    @Test
+    fun savedFieldStateStaysWithinTransactionLimit() {
+        val fieldCount = 400
+        val fields = Array(fieldCount) { "Field$it" }
+        val noteTypeName = addStandardNoteType("Many Fields", fields, "{{Field0}}", "{{Field0}}")
+        val notetype = col.notetypes.byName(noteTypeName)!!
+        val editor = NoteEditorTestBuilder(notetype).build()
+
+        val viewState = SparseArray<Parcelable>()
+        editor.requireView().saveHierarchyState(viewState)
+        val parcel = Parcel.obtain()
+        val sizeInBytes =
+            try {
+                parcel.writeSparseArray(viewState)
+                parcel.dataSize()
+            } finally {
+                parcel.recycle()
+            }
+
+        assertThat(
+            "saved field state for $fieldCount fields must stay well under the Binder limit (was $sizeInBytes bytes)",
+            sizeInBytes,
+            lessThan(256 * 1024),
+        )
+    }
+
+    @Test
+    fun cursorSelectionIsRetainedAcrossViewStateRestore() {
+        val editor =
+            getNoteEditorAdding(NoteType.BASIC)
+                .withFirstField("hello world")
+                .build()
+        val editText = editor.getFieldForTest(0)
+        editText.setSelection(2, 5)
+
+        var lineView: View = editText
+        while (lineView !is FieldEditLine) {
+            lineView = lineView.parent as View
+        }
+        val viewState = SparseArray<Parcelable>()
+        lineView.saveHierarchyState(viewState)
+
+        // restore into a fresh line, as happens after a configuration change
+        val restored = FieldEditLine(editor.requireContext())
+        restored.id = lineView.id
+        restored.restoreHierarchyState(viewState)
+
+        assertThat(restored.binding.editText.selectionStart, equalTo(2))
+        assertThat(restored.binding.editText.selectionEnd, equalTo(5))
+    }
 
     @Test
     fun testErrorMessageNull() =
@@ -208,7 +301,7 @@ class NoteEditorTest : RobolectricTest() {
     @Test
     fun verifyStartupAndCloseWithNoCollectionDoesNotCrash() {
         enableNullCollection()
-        val intent = NoteEditorLauncher.AddNote().toIntent(targetContext)
+        val intent = NoteEditorDestination.AddNote().toIntent()
         ActivityScenario.launchActivityForResult<NoteEditorActivity>(intent).use { scenario ->
             scenario.onNoteEditor { noteEditor ->
                 noteEditor.requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -221,7 +314,7 @@ class NoteEditorTest : RobolectricTest() {
 
     @Test
     fun testHandleMultimediaActionsDisplaysBottomSheet() {
-        val intent = NoteEditorLauncher.AddNote().toIntent(targetContext)
+        val intent = NoteEditorDestination.AddNote().toIntent()
         ActivityScenario.launchActivityForResult<NoteEditorActivity>(intent).use { scenario ->
             scenario.onNoteEditor { noteEditor ->
                 noteEditor.showMultimediaBottomSheet()
@@ -491,7 +584,7 @@ class NoteEditorTest : RobolectricTest() {
         val activity =
             startActivityNormallyOpenCollectionWithIntent(
                 NoteEditorActivity::class.java,
-                NoteEditorLauncher.AddNote(testDeckId1).toIntent(targetContext),
+                NoteEditorDestination.AddNote(testDeckId1).toIntent(),
             )
         val editor = activity.getNoteEditorFragment()
         val deckNameView = editor.view?.findViewById<TextView>(R.id.note_deck_name)
@@ -664,6 +757,35 @@ class NoteEditorTest : RobolectricTest() {
         }
 
     @Test
+    fun `hasUnsavedChanges - sticky field content alone is not an unsaved change`() =
+        runTest {
+            val basic = makeNoteForType(NoteType.BASIC)
+            basic!!.fields[0].sticky = true
+
+            val editor =
+                getNoteEditorAdding(NoteType.BASIC)
+                    .withFirstField("Hello")
+                    .withSecondField("World")
+                    .build()
+
+            editor.saveNote()
+            advanceRobolectricLooper()
+
+            // sticky field 0 carries "Hello" into the next note; nothing has actually been edited yet
+            assertThat(editor.currentFieldStrings.toList(), contains("Hello", ""))
+            assertFalse(editor.hasUnsavedChanges(), "fresh screen after save: no real edits yet")
+
+            // user types into the non-sticky field, then reverts their own edit
+            editor.setFieldValueFromUi(1, "x")
+            editor.setFieldValueFromUi(1, "")
+
+            assertFalse(
+                editor.hasUnsavedChanges(),
+                "user's only edit was reverted; only the sticky field remains populated - should not count as unsaved",
+            )
+        }
+
+    @Test
     fun `changing deck with multiple card ids moves all sibling cards`() =
         runTest {
             // Create a note with 2 cards (Basic and Reversed)
@@ -672,9 +794,9 @@ class NoteEditorTest : RobolectricTest() {
             val cardIds: List<Long> = note.cardIds(col)
             val testDeckId: Long = addDeck("Test Deck")
 
-            // Launch Editor using the Launcher bundle (mimic launch from browser)
+            // Launch Editor using the destination bundle (mimic launch from browser)
             val bundle =
-                NoteEditorLauncher
+                NoteEditorDestination
                     .EditSelection(
                         cardIds = cardIds,
                         animation = DEFAULT,
@@ -703,9 +825,9 @@ class NoteEditorTest : RobolectricTest() {
             val initialDeckId = col.getCard(cardIds[1]).did
             val newDeckId: Long = addDeck("Test Deck")
 
-            // Launch Editor using the Launcher bundle with a single card id
+            // Launch Editor using the destination bundle with a single card id
             val bundle =
-                NoteEditorLauncher
+                NoteEditorDestination
                     .EditSelection(
                         cardIds = listOf(cardIds[0]),
                         animation = DEFAULT,
@@ -820,8 +942,8 @@ class NoteEditorTest : RobolectricTest() {
         ensureCollectionLoadIsSynchronous()
         val bundle =
             when (from) {
-                REVIEWER -> NoteEditorLauncher.AddNoteFromReviewer().toBundle()
-                DECK_LIST -> NoteEditorLauncher.AddNote().toBundle()
+                REVIEWER -> NoteEditorDestination.AddNoteFromReviewer().toBundle()
+                DECK_LIST -> NoteEditorFragment.addNoteArgs()
             }
         return openNoteEditorWithArgs(bundle)
     }
@@ -841,22 +963,10 @@ class NoteEditorTest : RobolectricTest() {
     ): NoteEditorFragment {
         val bundle =
             when (from) {
-                REVIEWER -> NoteEditorLauncher.EditSelection(listOf(n.firstCard().id), DEFAULT).toBundle()
-                DECK_LIST -> NoteEditorLauncher.AddNote().toBundle()
+                REVIEWER -> NoteEditorDestination.EditSelection(listOf(n.firstCard().id), DEFAULT).toBundle()
+                DECK_LIST -> NoteEditorFragment.addNoteArgs()
             }
         return openNoteEditorWithArgs(bundle)
-    }
-
-    fun openNoteEditorWithArgs(
-        arguments: Bundle,
-        action: String? = null,
-    ): NoteEditorFragment {
-        val activity =
-            startActivityNormallyOpenCollectionWithIntent(
-                NoteEditorActivity::class.java,
-                NoteEditorLauncher.PassArguments(arguments).toIntent(targetContext, action),
-            )
-        return activity.getNoteEditorFragment()
     }
 
     @DuplicatedCode("NoteEditor in androidTest")
@@ -873,10 +983,6 @@ class NoteEditorTest : RobolectricTest() {
         }
         wrapped.get()?.let { throw it }
     }
-
-    @DuplicatedCode("NoteEditor in androidTest")
-    fun NoteEditorActivity.getNoteEditorFragment(): NoteEditorFragment =
-        supportFragmentManager.findFragmentById(R.id.note_editor_fragment_frame) as NoteEditorFragment
 
     private enum class FromScreen {
         DECK_LIST,

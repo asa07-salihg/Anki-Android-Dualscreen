@@ -1,31 +1,19 @@
-/*
- * Copyright (c) 2025 Brayan Oliveira <69634269+brayandso@users.noreply.github.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki
 
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.core.graphics.createBitmap
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.time.getTimestamp
 import com.ichi2.anki.compat.CompatHelper
@@ -35,6 +23,8 @@ import com.ichi2.anki.ui.windows.reviewer.whiteboard.WhiteboardFragment
 import com.ichi2.anki.ui.windows.reviewer.whiteboard.WhiteboardView
 import com.ichi2.themes.Themes
 import dev.androidbroadcast.vbpd.viewBinding
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 class DrawingFragment : Fragment(R.layout.fragment_drawing) {
     private val binding by viewBinding(FragmentDrawingBinding::bind)
@@ -48,15 +38,7 @@ class DrawingFragment : Fragment(R.layout.fragment_drawing) {
         super.onViewCreated(view, savedInstanceState)
         binding.toolbar.apply {
             setNavigationOnClickListener {
-                // avoid showing the discard changes dialog only if the user hasn't drawn anything,
-                // even if is is erased or undone, since they may want to undo/redo something.
-                if (whiteboardFragment?.isEmpty() == true) {
-                    requireActivity().onBackPressedDispatcher.onBackPressed()
-                } else {
-                    DiscardChangesDialog.showDialog(requireContext()) {
-                        requireActivity().onBackPressedDispatcher.onBackPressed()
-                    }
-                }
+                requireActivity().onBackPressedDispatcher.onBackPressed()
             }
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -65,6 +47,45 @@ class DrawingFragment : Fragment(R.layout.fragment_drawing) {
                 }
                 true
             }
+        }
+        setupBackPressHandling()
+    }
+
+    /**
+     * Wires the discard-dialog back-press flow and tells the child WhiteboardFragment
+     * to suppress its "go back again to exit" snackbar.
+     *
+     * Deferred via `view.post` so it runs after the child's `onViewCreated`, ensuring
+     * our [OnBackPressedCallback] is added to the dispatcher *after* the child's and
+     * wins LIFO. The relative order of parent vs child `onViewCreated` differs
+     * across platforms (Robolectric runs the child first; real devices have shown
+     * the opposite), so the post normalizes it.
+     */
+    private fun setupBackPressHandling() {
+        requireView().post {
+            if (!isAdded) return@post
+            val whiteboard = whiteboardFragment ?: return@post
+
+            whiteboard.setDrawingMode(true)
+
+            // Standard isEnabled pattern: only intercept the back press when there's
+            // content to discard. When empty, the callback stays disabled so the
+            // press falls through to the activity finishing and predictive back
+            // shows its system exit animation.
+            val backCallback =
+                object : OnBackPressedCallback(enabled = false) {
+                    override fun handleOnBackPressed() {
+                        DiscardChangesDialog.showDialog(requireContext()) {
+                            isEnabled = false
+                            requireActivity().onBackPressedDispatcher.onBackPressed()
+                        }
+                    }
+                }
+            requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+
+            whiteboard.isEmptyFlow
+                .onEach { isEmpty -> backCallback.isEnabled = !isEmpty }
+                .launchIn(viewLifecycleOwner.lifecycleScope)
         }
     }
 
@@ -84,6 +105,9 @@ class DrawingFragment : Fragment(R.layout.fragment_drawing) {
         val bitmap = createBitmap(view.width, view.height)
         val canvas = Canvas(bitmap)
 
+        // TODO: drop the baked-in background and save with a transparent canvas, so the drawing
+        //  adapts to whichever theme the card is reviewed under and empty space costs nothing
+        //  in the file.
         val backgroundColor =
             if (Themes.isNightTheme) {
                 Color.BLACK
@@ -95,7 +119,14 @@ class DrawingFragment : Fragment(R.layout.fragment_drawing) {
         view.draw(canvas)
 
         val baseFileName = "Whiteboard" + getTimestamp(TimeManager.time)
-        return CompatHelper.compat.saveImage(requireContext(), bitmap, baseFileName, "jpg", Bitmap.CompressFormat.JPEG, 95)
+        return CompatHelper.compat.saveImage(
+            requireContext(),
+            bitmap,
+            baseFileName,
+            "webp",
+            CompatHelper.compat.webpLossyFormat,
+            90,
+        )
     }
 
     companion object {

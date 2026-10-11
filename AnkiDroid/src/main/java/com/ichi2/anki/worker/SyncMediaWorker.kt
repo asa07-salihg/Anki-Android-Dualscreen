@@ -1,24 +1,13 @@
-/*
- *  Copyright (c) 2024 Brayan Oliveira <brayandso.dev@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.worker
 
 import android.app.Notification
+import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
+import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.Constraints
@@ -35,13 +24,17 @@ import androidx.work.WorkerParameters
 import anki.sync.MediaSyncProgress
 import anki.sync.SyncAuth
 import anki.sync.syncAuth
-import com.ichi2.anki.Channel
 import com.ichi2.anki.CollectionManager
+import com.ichi2.anki.CollectionManager.TR
+import com.ichi2.anki.NotificationChannel
 import com.ichi2.anki.R
 import com.ichi2.anki.cancelMediaSync
+import com.ichi2.anki.common.permissions.canPostNotifications
 import com.ichi2.anki.notifications.NotificationId
+import com.ichi2.anki.receiver.CopyToClipboardReceiver
+import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.utils.ext.trySetForeground
-import com.ichi2.utils.Permissions
+import com.ichi2.utils.TruncatedString
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import net.ankiweb.rsdroid.Backend
@@ -53,7 +46,7 @@ class SyncMediaWorker(
 ) : CoroutineWorker(context, parameters) {
     private val cancelIntent = WorkManager.getInstance(context).createCancelPendingIntent(id)
     private val notificationManager: NotificationManagerCompat? =
-        if (Permissions.canPostNotifications(context)) {
+        if (canPostNotifications(context)) {
             NotificationManagerCompat.from(context)
         } else {
             null
@@ -91,9 +84,21 @@ class SyncMediaWorker(
         } catch (throwable: Throwable) {
             Timber.w(throwable, "SyncMediaWorker failed")
             notify {
-                setContentTitle(CollectionManager.TR.syncMediaFailed())
+                // TODO: add a contentIntent, so tapping the notification opens the app
+                //  (ideally showing the media sync log: an AlertDialog in DeckPicker)
+                setContentTitle(TR.syncMediaFailed())
                 throwable.localizedMessage?.let { message ->
                     setContentText(message)
+                    setStyle(
+                        NotificationCompat
+                            .BigTextStyle()
+                            .bigText(message),
+                    )
+                    addAction(
+                        R.drawable.baseline_content_copy_24,
+                        with(applicationContext) { TR.sentenceCase.copyToClipboard },
+                        getCopyToClipboardIntent(TruncatedString.from(message)),
+                    )
                 }
             }
             Timber.d("SyncMediaWorker: showing failure notification")
@@ -129,7 +134,7 @@ class SyncMediaWorker(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         val title = applicationContext.getString(R.string.syncing_media)
-        val cancelTitle = CollectionManager.TR.syncAbortButton()
+        val cancelTitle = TR.syncAbortButton()
         val notification =
             buildNotification {
                 setContentTitle(title)
@@ -145,6 +150,17 @@ class SyncMediaWorker(
         }
     }
 
+    @VisibleForTesting
+    internal fun getCopyToClipboardIntent(text: TruncatedString): PendingIntent {
+        val intent = CopyToClipboardReceiver.getIntent(applicationContext, text)
+        return PendingIntent.getBroadcast(
+            applicationContext,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
     private fun notify(notification: Notification) = notificationManager?.notify(NotificationId.SYNC_MEDIA, notification)
 
     private fun notify(builder: NotificationCompat.Builder.() -> Unit) {
@@ -153,7 +169,7 @@ class SyncMediaWorker(
 
     private fun buildNotification(block: NotificationCompat.Builder.() -> Unit): Notification =
         NotificationCompat
-            .Builder(applicationContext, Channel.SYNC.id)
+            .Builder(applicationContext, NotificationChannel.SYNC.id)
             .apply {
                 priority = NotificationCompat.PRIORITY_LOW
                 setSmallIcon(R.drawable.ic_star_notify)
@@ -164,7 +180,7 @@ class SyncMediaWorker(
 
     private fun getProgressNotification(progress: CharSequence): Notification {
         val title = applicationContext.getString(R.string.syncing_media)
-        val cancelTitle = CollectionManager.TR.syncAbortButton()
+        val cancelTitle = TR.syncAbortButton()
 
         return buildNotification {
             setContentTitle(title)

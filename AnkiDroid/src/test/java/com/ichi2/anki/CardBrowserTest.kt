@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki
 
 import android.annotation.SuppressLint
@@ -26,12 +13,13 @@ import android.widget.SpinnerAdapter
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.edit
-import androidx.core.os.bundleOf
+import androidx.core.net.toUri
 import androidx.core.view.children
 import androidx.core.view.get
 import androidx.core.view.size
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
+import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onData
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions
@@ -54,6 +42,7 @@ import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.IntentHandler.Companion.grantedStoragePermissions
 import com.ichi2.anki.RobolectricTest.Companion.advanceRobolectricLooper
+import com.ichi2.anki.browser.BrowserColumnKey
 import com.ichi2.anki.browser.BrowserMultiColumnAdapter
 import com.ichi2.anki.browser.BrowserMultiColumnAdapter.Companion.LINES_VISIBLE_WHEN_COLLAPSED
 import com.ichi2.anki.browser.CardBrowserColumn
@@ -81,6 +70,7 @@ import com.ichi2.anki.browser.setSelectedDeck
 import com.ichi2.anki.browser.toRowSelection
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.isRunningAsUnitTest
+import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.libanki.BrowserConfig
 import com.ichi2.anki.libanki.CardId
 import com.ichi2.anki.libanki.CardType
@@ -91,16 +81,16 @@ import com.ichi2.anki.libanki.QueueType
 import com.ichi2.anki.libanki.testutils.AnkiTest
 import com.ichi2.anki.model.CardsOrNotes.CARDS
 import com.ichi2.anki.model.CardsOrNotes.NOTES
-import com.ichi2.anki.model.LegacySortType
 import com.ichi2.anki.model.SelectableDeck
+import com.ichi2.anki.model.SortType
+import com.ichi2.anki.noteeditor.toIntent
+import com.ichi2.anki.observability.undoableOp
 import com.ichi2.anki.scheduling.ForgetCardsDialog
 import com.ichi2.anki.servicelayer.PreferenceUpgradeService
 import com.ichi2.anki.servicelayer.PreferenceUpgradeService.PreferenceUpgrade.UpgradeBrowserColumns.Companion.LEGACY_COLUMN1_KEYS
 import com.ichi2.anki.servicelayer.PreferenceUpgradeService.PreferenceUpgrade.UpgradeBrowserColumns.Companion.LEGACY_COLUMN2_KEYS
 import com.ichi2.anki.settings.Prefs
-import com.ichi2.anki.ui.internationalization.toSentenceCase
-import com.ichi2.anki.utils.ext.getCurrentDialogFragment
-import com.ichi2.anki.utils.ext.showDialogFragment
+import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.testutils.IntentAssert
 import com.ichi2.testutils.common.Flaky
 import com.ichi2.testutils.common.OS
@@ -491,6 +481,30 @@ class CardBrowserTest : RobolectricTest() {
         }
     }
 
+    /**
+     * Sending the `anki://x-callback-url/browser?search=` deep link searches in [CardBrowser].
+     */
+    @Test
+    fun browserDeepLinkOpensCardBrowserWithSearch() {
+        ensureCollectionLoadIsSynchronous()
+        addBasicNote("dog", "barks")
+        addBasicNote("cat", "meows")
+
+        val deepLink =
+            Intent(targetContext, CardBrowser::class.java).apply {
+                action = Intent.ACTION_VIEW
+                data = "anki://x-callback-url/browser?search=dog".toUri()
+            }
+
+        ActivityScenario.launch<CardBrowser>(deepLink).use { scenario ->
+            advanceRobolectricLooper()
+            scenario.onActivity { browser ->
+                assertThat("the deep link's search is applied", browser.viewModel.searchTerms, equalTo("dog"))
+                assertThat("only the matching note is shown", browser.viewModel.rowCount, equalTo(1))
+            }
+        }
+    }
+
     @Test
     fun tagWithBracketsDisplaysProperly() =
         runTest {
@@ -502,38 +516,6 @@ class CardBrowserTest : RobolectricTest() {
             b.filterByTagSync("sketchy::(1)")
 
             assertThat("tagged card should be returned", b.viewModel.rowCount, equalTo(1))
-        }
-
-    @Test
-    @Flaky(os = OS.WINDOWS, "IllegalStateException: Card '1596783600440' not found")
-    fun previewWorksAfterSort() =
-        runTest {
-            // #7286
-            val cid1 = addBasicNote("Hello", "World").cards()[0].id
-            val cid2 = addBasicNote("Hello2", "World2").cards()[0].id
-
-            val b = browserWithNoNewCards
-
-            b.selectRowsWithPositions(0)
-            val previewIntent = b.viewModel.queryPreviewIntentData()
-            assertThat("before: index", previewIntent.currentIndex, equalTo(0))
-            assertThat(
-                "before: cards",
-                previewIntent.idsFile.getIds(),
-                equalTo(listOf(cid1, cid2)),
-            )
-
-            // reverse
-            b.viewModel.changeCardOrder(LegacySortType.SORT_FIELD)
-
-            b.replaceSelectionWith(intArrayOf(0))
-            val intentAfterReverse = b.viewModel.queryPreviewIntentData()
-            assertThat("after: index", intentAfterReverse.currentIndex, equalTo(0))
-            assertThat(
-                "after: cards",
-                intentAfterReverse.idsFile.getIds(),
-                equalTo(listOf(cid2, cid1)),
-            )
         }
 
     /** 7420  */
@@ -554,9 +536,8 @@ class CardBrowserTest : RobolectricTest() {
 
             assertThat("The target deck should be selected", b.lastDeckId, equalTo(targetDid))
 
-            val addIntent = b.addNoteLauncher.toIntent(targetContext)
-            val bundle = addIntent.getBundleExtra(NoteEditorActivity.FRAGMENT_ARGS_EXTRA)
-            IntentAssert.hasExtra(bundle, NoteEditorFragment.EXTRA_DID, targetDid)
+            val addIntent = b.cardBrowserFragment.addNoteDestination.toIntent(targetContext)
+            IntentAssert.hasExtra(addIntent.extras, NoteEditorFragment.EXTRA_DID, targetDid)
         }
 
     /** 7420  */
@@ -568,9 +549,8 @@ class CardBrowserTest : RobolectricTest() {
 
         assertThat("The initial deck should be selected", b.lastDeckId, equalTo(initialDid))
 
-        val addIntent = b.addNoteLauncher.toIntent(targetContext)
-        val bundle = addIntent.getBundleExtra(NoteEditorActivity.FRAGMENT_ARGS_EXTRA)
-        IntentAssert.hasExtra(bundle, NoteEditorFragment.EXTRA_DID, initialDid)
+        val addIntent = b.cardBrowserFragment.addNoteDestination.toIntent(targetContext)
+        IntentAssert.hasExtra(addIntent.extras, NoteEditorFragment.EXTRA_DID, initialDid)
     }
 
     @Test
@@ -710,10 +690,10 @@ class CardBrowserTest : RobolectricTest() {
             // simulate the user using the ForgetCardsDialog to start the cards reset process
             b.supportFragmentManager.setFragmentResult(
                 ForgetCardsDialog.REQUEST_KEY_FORGET,
-                bundleOf(
-                    ForgetCardsDialog.ARG_RESTORE_ORIGINAL to true,
-                    ForgetCardsDialog.ARG_RESET_REPETITION to false,
-                ),
+                Bundle().apply {
+                    putBoolean(ForgetCardsDialog.ARG_RESTORE_ORIGINAL, true)
+                    putBoolean(ForgetCardsDialog.ARG_RESET_REPETITION, false)
+                },
             )
 
             assertThat(
@@ -752,7 +732,7 @@ class CardBrowserTest : RobolectricTest() {
                 equalTo("2"),
             )
 
-            b.onUndo()
+            b.cardBrowserFragment.onUndo()
 
             assertThat(
                 "Position of checked card after undo should be reset",
@@ -763,17 +743,18 @@ class CardBrowserTest : RobolectricTest() {
 
     @Test
     fun change_deck_dialog_is_dismissed_on_activity_recreation() {
-        val cardBrowser = browserWithNoNewCards
-
-        val dialog = cardBrowser.cardBrowserFragment.getChangeDeckDialog(listOf())
-        cardBrowser.showDialogFragment(dialog)
-
-        val shownDialog: Fragment? = cardBrowser.getCurrentDialogFragment()
+        val cardBrowser = browserWithMultipleNotes
+        cardBrowser.viewModel.selectRowAtPosition(0)
+        cardBrowser.cardBrowserFragment.showChangeDeckDialog()
+        advanceRobolectricLooper()
+        val shownDialog: Fragment? =
+            cardBrowser.supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG)
         assertNotNull(shownDialog)
 
         ActivityCompat.recreate(cardBrowser)
         advanceRobolectricLooper()
-        val dialogAfterRecreate: Fragment? = cardBrowser.getCurrentDialogFragment()
+        val dialogAfterRecreate: Fragment? =
+            cardBrowser.supportFragmentManager.findFragmentByTag(DeckSelectionDialog.TAG)
         assertNull(dialogAfterRecreate)
     }
 
@@ -823,7 +804,12 @@ class CardBrowserTest : RobolectricTest() {
         )
 
         // Change the display order of the card browser
-        cardBrowserController.get().viewModel.changeCardOrder(LegacySortType.EASE)
+        cardBrowserController.get().viewModel.setSortType(
+            SortType.CollectionOrdering(
+                BrowserColumnKey("cardEase"),
+                reverse = true,
+            ),
+        )
 
         // Kill and restart the activity and ensure that display order is preserved
         val outBundle = Bundle()
@@ -881,7 +867,7 @@ class CardBrowserTest : RobolectricTest() {
             assertThat("Result should be empty", cardBrowser.viewModel.rowCount, equalTo(0))
 
             advanceRobolectricLooper()
-            cardBrowser.searchAllDecks()
+            cardBrowser.viewModel.setSelectedDeck(SelectableDeck.AllDecks)
             advanceRobolectricLooper()
             assertThat("Result should contain one card", cardBrowser.viewModel.rowCount, equalTo(1))
         }
@@ -894,7 +880,7 @@ class CardBrowserTest : RobolectricTest() {
             addBasicAndReversedNote("Hello", "Anki")
 
             browserWithNoNewCards.apply {
-                searchAllDecks()
+                viewModel.setSelectedDeck(SelectableDeck.AllDecks)
                 advanceRobolectricLooper()
                 with(viewModel) {
                     assertThat("Result should contain 4 cards", rowCount, equalTo(4))
@@ -903,29 +889,6 @@ class CardBrowserTest : RobolectricTest() {
                     assertThat("Result should contain 2 cards (one per note)", rowCount, equalTo(2))
                 }
             }
-        }
-
-    /** PR #14859  */
-    @Test
-    fun checkDisplayOrderAfterTogglingCardsToNotes() =
-        withBrowser {
-            viewModel.changeCardOrder(LegacySortType.EASE) // order no. 7 corresponds to "cardEase"
-
-            viewModel.changeCardOrder(LegacySortType.EASE) // reverse the list
-
-            viewModel.setCardsOrNotes(NOTES)
-            searchCards()
-
-            assertThat(
-                "Card Browser has the new noteSortType field",
-                col.config.get<String>("noteSortType"),
-                equalTo("cardEase"),
-            )
-            assertThat(
-                "Card Browser has the new browserNoteSortBackwards field",
-                col.config.get<Boolean>("browserNoteSortBackwards"),
-                equalTo(true),
-            )
         }
 
     data class CheckedCardResult(
@@ -972,26 +935,6 @@ class CardBrowserTest : RobolectricTest() {
         val shadowActivity = shadowOf(browser)
         shadowActivity.clickMenuItem(actionSelectAll)
         advanceRobolectricLooper()
-    }
-
-    /** Returns an instance of [CardBrowser] containing [noteCount] notes */
-    private fun getBrowserWithNotes(
-        noteCount: Int,
-        reversed: Boolean = false,
-    ): CardBrowser {
-        ensureCollectionLoadIsSynchronous()
-        if (reversed) {
-            for (i in 0 until noteCount) {
-                addBasicAndReversedNote(i.toString(), "back")
-            }
-        } else {
-            for (i in 0 until noteCount) {
-                addBasicNote(i.toString(), "back")
-            }
-        }
-        return super.startRegularActivity<CardBrowser>(Intent()).also {
-            advanceRobolectricLooper() // may be a fix for flaky tests
-        }
     }
 
     private val browserWithNoNewCards: CardBrowser
@@ -1314,7 +1257,7 @@ class CardBrowserTest : RobolectricTest() {
             assertNotNull(fieldSelectorAdapter, "Fields adapter was not set")
             assertEquals(2, fieldSelectorAdapter.count)
             assertEquals(
-                TR.browsingAllFields().toSentenceCase(targetContext, R.string.sentence_all_fields),
+                with(targetContext) { TR.sentenceCase.allFields },
                 fieldSelectorAdapter.getItem(0),
             )
             assertEquals(TR.editingTags(), fieldSelectorAdapter.getItem(1))
@@ -1341,7 +1284,7 @@ class CardBrowserTest : RobolectricTest() {
             assertEquals(4, fieldSelectorAdapter.count)
             val defaultFields =
                 listOf(
-                    TR.browsingAllFields().toSentenceCase(targetContext, R.string.sentence_all_fields),
+                    with(targetContext) { TR.sentenceCase.allFields },
                     TR.editingTags(),
                 )
             assertEquals(defaultFields + listOf("Bfield0", "Bfield1"), fieldSelectorAdapter.getAdapterData())
@@ -1594,11 +1537,67 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_select_all to true,
                     R.id.action_open_options to true,
                     R.id.action_create_filtered_deck to true,
-                    R.id.action_find_replace to false,
+                    R.id.action_find_replace to true,
                 )
 
             assertMenusEqual(expectedMenuItems, menu)
         }
+
+    @Test
+    fun `note edits made in the browser are saved`() {
+        val note = addBasicNote("Hello", "World")
+
+        withBrowser(fragmented = true) {
+            cardBrowserFragment.openNoteEditorForCurrentlySelectedRow()
+            advanceRobolectricLooper()
+
+            val editor = requireNotNull(fragment) { "note editor unloaded" }
+            editor.setFieldValueFromUi(0, "Hello edited")
+            editor.saveNote()
+            advanceRobolectricLooper()
+
+            assertThat("edit is saved", col.getNote(note.id).fields[0], equalTo("Hello edited"))
+        }
+    }
+
+    /**
+     * see issue 15609
+     */
+    @Test
+    fun `image occlusion edits made in the browser are saved - 15609`() {
+        val note =
+            col.newNote(col.notetypes.byName("Image Occlusion")!!).apply {
+                setField(0, "{{c1::x}}")
+                col.addNote(this, col.decks.selected())
+            }
+
+        withBrowser(fragmented = true) {
+            cardBrowserFragment.openNoteEditorForCurrentlySelectedRow()
+            advanceRobolectricLooper()
+            val editor = requireNotNull(fragment) { "note editor unloaded" }
+
+            undoableOp {
+                updateImageOcclusionNote(
+                    noteId = note.id,
+                    occlusions = "{{c2::x}}",
+                    header = "",
+                    backExtra = "",
+                    tags = emptyList(),
+                )
+            }
+
+            // calling advanceRobolectricLooper() only afterwards
+            // otherwise the pane would be reloaded and editor.saveNote() would not be able to overwrite the note with the stale one anymore
+            editor.saveNote()
+            advanceRobolectricLooper()
+
+            assertThat(
+                "change is not overwritten",
+                col.getNote(note.id).fields[0],
+                containsString("c2::x"),
+            )
+        }
+    }
 
     @Test
     fun `options menu test - new ui - standard`() =
@@ -1626,7 +1625,7 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_select_all to true,
                     R.id.action_open_options to true,
                     R.id.action_create_filtered_deck to true,
-                    R.id.action_find_replace to false,
+                    R.id.action_find_replace to true,
                 )
 
             assertMenusEqual(expectedMenuItems, menu)
@@ -1657,7 +1656,7 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_reset_cards_progress to true,
                     R.id.action_preview_many to true,
                     R.id.action_export_selected to true,
-                    R.id.action_find_replace to false,
+                    R.id.action_find_replace to true,
                     R.id.action_delete_card to true,
                     R.id.action_undo to true,
                 )
@@ -1695,7 +1694,7 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_reset_cards_progress to false,
                     R.id.action_preview_many to true,
                     R.id.action_export_selected to false,
-                    R.id.action_find_replace to false,
+                    R.id.action_find_replace to true,
                     R.id.action_delete_card to false,
                     R.id.action_undo to true,
                 )
@@ -1729,7 +1728,7 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_select_all to true,
                     R.id.action_open_options to true,
                     R.id.action_create_filtered_deck to true,
-                    R.id.action_find_replace to false,
+                    R.id.action_find_replace to true,
                     // Note Editor
                     R.id.action_save to true,
                     R.id.action_preview to true,
@@ -1770,7 +1769,7 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_reset_cards_progress to true,
                     R.id.action_preview_many to false,
                     R.id.action_export_selected to true,
-                    R.id.action_find_replace to false,
+                    R.id.action_find_replace to true,
                     R.id.action_delete_card to true,
                     R.id.action_undo to true,
                     // Note Editor
@@ -1832,7 +1831,7 @@ class CardBrowserTest : RobolectricTest() {
                     R.id.action_select_all to false,
                     R.id.action_open_options to true,
                     R.id.action_create_filtered_deck to true,
-                    R.id.action_find_replace to false,
+                    R.id.action_find_replace to true,
                 )
 
             assertMenusEqual(expectedMenuItems, menu)
@@ -1931,15 +1930,15 @@ class CardBrowserTest : RobolectricTest() {
     ) {
         supportFragmentManager.setFragmentResult(
             REQUEST_FIND_AND_REPLACE,
-            bundleOf(
-                ARG_SEARCH to search,
-                ARG_REPLACEMENT to replacement,
-                ARG_FIELD to field,
-                ARG_ONLY_SELECTED_NOTES to onlyInSelectedNotes,
+            Bundle().apply {
+                putString(ARG_SEARCH, search)
+                putString(ARG_REPLACEMENT, replacement)
+                putString(ARG_FIELD, field)
+                putBoolean(ARG_ONLY_SELECTED_NOTES, onlyInSelectedNotes)
                 // "Ignore case" checkbox text => when it's checked we pass false to the backend
-                ARG_MATCH_CASE to matchCase,
-                ARG_REGEX to regex,
-            ),
+                putBoolean(ARG_MATCH_CASE, matchCase)
+                putBoolean(ARG_REGEX, regex)
+            },
         )
     }
 
@@ -2031,11 +2030,6 @@ private fun CardBrowser.rerenderAllCards() {
 
 fun CardBrowser.hasSelectedCardAtPosition(i: Int): Boolean = viewModel.selectedRows.contains(viewModel.getRowAtPosition(i))
 
-fun CardBrowser.replaceSelectionWith(positions: IntArray) {
-    viewModel.selectNone()
-    selectRowsWithPositions(*positions)
-}
-
 fun CardBrowser.column1Text(row: Int): CharSequence? = getVisibleRows()[row].columnViews[0].text
 
 fun CardBrowser.selectRowsWithPositions(vararg positions: Int) {
@@ -2048,7 +2042,7 @@ fun CardBrowser.selectRowsWithPositions(vararg positions: Int) {
     }
 }
 
-fun CardBrowser.clickRowAtPosition(pos: Int) = cardBrowserFragment.onTap(viewModel.cards[pos])
+fun CardBrowser.clickRowAtPosition(pos: Int) = viewModel.onTap(viewModel.cards[pos].toRowSelection())
 
 fun CardBrowser.longClickRowAtPosition(pos: Int) = viewModel.handleRowLongPress(viewModel.cards[pos].toRowSelection())
 
@@ -2132,3 +2126,33 @@ suspend fun CardBrowser.selectAll() {
 
 val CardBrowser.menu: Menu
     get() = if (this.useSearchView) cardBrowserFragment.searchBar!!.menu else shadowOf(this).optionsMenu!!
+
+val CardBrowser.selectedDeckNameForUi: String
+    get() = CollectionManager.getColUnsafe().decks.name(viewModel.lastDeckId!!)
+
+/** Returns an instance of [CardBrowser] containing [noteCount] notes */
+context(test: RobolectricTest)
+fun getBrowserWithNotes(
+    noteCount: Int,
+    reversed: Boolean = false,
+): CardBrowser {
+    test.ensureCollectionLoadIsSynchronous()
+    if (reversed) {
+        for (i in 0 until noteCount) {
+            test.addBasicAndReversedNote(i.toString(), "back")
+        }
+    } else {
+        for (i in 0 until noteCount) {
+            test.addBasicNote(i.toString(), "back")
+        }
+    }
+    return test.startRegularActivity<CardBrowser>(Intent()).also {
+        advanceRobolectricLooper() // may be a fix for flaky tests
+    }
+}
+
+context(test: RobolectricTest)
+fun withCardBrowser(
+    noteCount: Int,
+    block: (CardBrowser) -> Unit,
+) = block(getBrowserWithNotes(noteCount))

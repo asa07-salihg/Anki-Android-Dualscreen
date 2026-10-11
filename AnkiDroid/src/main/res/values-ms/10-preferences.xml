@@ -6,43 +6,22 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- generic strings -->
     <string name="disabled">Dilumpuhkan</string>
@@ -60,7 +39,6 @@
     <string name="pref_cat_sync" comment="title of the sync preferences category" maxLength="41">Segerak</string>
     <string name="pref_cat_scheduling" maxLength="41">Penjadualan</string>
     <string name="pref_cat_whiteboard" maxLength="41">Papan putih</string>
-    <string name="pref_cat_appearance" maxLength="41">Penampilan</string>
     <string name="pref_cat_themes" maxLength="41">Tema</string>
     <string name="pref_cat_gestures" maxLength="41">Gerak isyarat</string>
     <string name="pref_cat_controls" maxLength="41">Kawalan</string>
@@ -68,6 +46,15 @@
     <string name="pref_cat_workarounds" maxLength="41">Penyelesaian sementara</string>
     <string name="pref_cat_plugins" maxLength="41">Plugin</string>
     <string name="pref_cat_editing" maxLength="41">Editing</string>
+    <string name="pref_cat_security" maxLength="41">Security</string>
+    <!-- Card template JavaScript API permissions -->
+    <string name="allow_dangerous_js_api_title" maxLength="41">Globally allow dangerous JavaScript APIs</string>
+    <string name="allow_dangerous_js_api_summ">Allows any card or template to read and modify other cards, or your Anki collection data.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="dangerous_js_api_denied_snackbar">Security: Unsafe JavaScript call blocked.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
+    <!-- External-app launching from card content (intent: / android-app: URLs) -->
+    <string name="allow_card_external_launch_title" maxLength="41">Allow cards to launch other apps</string>
+    <string name="allow_card_external_launch_summ">Cards can open other apps on your device, triggering potentially unwanted actions.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="card_external_launch_denied_snackbar">Security: Card blocked from launching another app.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
     <!-- preferences.xml entries-->
     <string name="whiteboard_stroke_width" maxLength="41">Lebar garisan</string>
     <string name="use_input_tag" maxLength="41">Taipkan jawapan ke dalam kad</string>
@@ -128,7 +115,6 @@
     <string name="tts_summ">Bacakan soalan dan jawapan jika tiada fail suara disediakan</string>
     <!-- Sync -->
     <string name="sync_fetch_missing_media" maxLength="41">Peroleh media bila segerak</string>
-    <string name="sync_account" maxLength="41">Akaun AnkiWeb</string>
     <string name="sync_account_summ_logged_out">Belum log masuk</string>
     <string name="automatic_sync_choice" maxLength="41">Penyegerakan automatik</string>
     <string name="automatic_sync_choice_summ">Segerak automatik bila aplikasi mula/keluar jika penyegerakan terakhir lebih dari 10
@@ -157,11 +143,9 @@
     <string name="select_locale_title">Pilih bahasa</string>
     <string name="software_render" maxLength="41">Lumpuhkan pemapar perkakasan kad</string>
     <string name="software_render_summ">Pemapar perkakasan lebih pantas namun mungkin terdapat kesulitan, khususnya pada Android 8/8.1. Jika anda tidak dapat melihat sebahagian daripada antara muka semakan kad, cuba tetapan ini.</string>
-    <string name="safe_display" maxLength="41">Mod paparan selamat</string>
-    <string name="safe_display_summ">Lumpuhkan semua animasi dan gunakan kaedah lebih selamat untuk membentuk kad. Peranti e-dakwat mungkin memerlukannya.</string>
-    <string name="disable_extended_text_ui" maxLength="41">Lumpuhkan Mod Sunting Medan Tunggal</string>
+    <string name="disable_extended_text_ui" maxLength="41">Disable single-field edit mode</string>
     <!--See: multimedia_editor_popup_cloze. We can\'t use format strings as this is auto-generated-->
-    <string name="disable_extended_text_ui_summ">Benarkan menu konteks \'Penghapusan Kloz\' ketika mod landskap.</string>
+    <string name="disable_extended_text_ui_summ">Allows \'Cloze deletion\' context menu when in landscape mode.</string>
     <string name="vertical_centering" maxLength="41">Jajar ke tengah</string>
     <string name="vertical_centering_summ">Tengahkan kandungan kad secara menegak</string>
     <string name="pref_double_tap_time_interval" maxLength="41">Double tap time interval</string>
@@ -172,6 +156,8 @@
     <string name="show_estimates_summ">Tunjuk masa semakan seterusnya pada butang jawapan</string>
     <string name="show_large_answer_buttons" maxLength="41">Tunjuk butang jawapan besar</string>
     <string name="show_large_answer_buttons_summ">Show answer button in 2 rows</string>
+    <string name="remove_animations" maxLength="41">Remove animations</string>
+    <string name="remove_animations_summary">Also enabled if animations are removed on the system settings</string>
     <string name="show_top_bar" maxLength="41">Tunjuk bar atas</string>
     <string name="show_top_bar_summary">Show card counts, answer timer, flag and mark in top bar</string>
     <string name="show_progress" maxLength="41">Tunjuk baki</string>
@@ -206,8 +192,6 @@
     <string name="pref_cat_reviewer" maxLength="41">Study Screen</string>
     <string name="show_deck_title" maxLength="41">Show deck title</string>
     <string name="accessibility" maxLength="41">Kebolehcapaian</string>
-    <!-- Paste clipboard image as png option -->
-    <string name="paste_as_png" maxLength="41">Tampal gambar papan keratan sebagai PNG</string>
     <string name="exit_via_double_tap_back" maxLength="41">Tekan kembali dua kali untuk kembali/keluar</string>
     <string name="exit_via_double_tap_back_summ">To avoid accidentally leaving the study screen or the app</string>
     <!-- Allow all files in media imports -->
@@ -216,7 +200,8 @@
     <!-- Custom sync server settings -->
     <string name="custom_sync_server_title" maxLength="41">Pelayan penyegerakan sendiri</string>
     <string name="custom_sync_server_summary_none_of_the_two_servers_used" comment="This summary is shown when neither of the two custom sync servers are used,         which is the default.">Tidak digunakan</string>
-    <string name="custom_sync_server_help2"><![CDATA[        Sebagai alternatif penyegerakan ke AnkiWeb,
+    <string name="custom_sync_server_help2"><![CDATA[
+        Sebagai alternatif penyegerakan ke AnkiWeb,
         Anda boleh gunakan pelayan sendiri untuk penyegerakan.
         Jika belum ditetapkan, pelayan AnkiWeb lalai akan digunakan.
         <a href="%s">Ketahui lebih lanjut</a>
@@ -247,7 +232,7 @@
     <string name="analytics_title" maxLength="41">Kongsi penggunaan ciri-ciri</string>
     <string name="analytics_summ">Anda boleh sumbang kepada AnkiDroid dengan membantu para pembangun lihat ciri-ciri yang orang ramai guna</string>
     <string name="note_editor_replace_newlines" maxLength="41">Ganti baris baru dengan HTML</string>
-    <string name="note_editor_replace_newlines_summ">Dalam Penyunting Nota, tukar mana-mana &lt;br&gt; kepada baris baru apabila sunting kad.</string>
+    <string name="note_editor_replace_newlines_summ">In the note editor, convert any instances of &lt;br&gt; to newlines when editing a card.</string>
     <string name="type_in_answer_focus" maxLength="41">Fokus ‘taip dalam jawapan’</string>
     <string name="type_in_answer_focus_summ">Automatically focus the ‘type in answer’ field in the study screen</string>
     <!-- About -->
@@ -277,6 +262,10 @@
     <string name="user_action_8" maxLength="28">User action 8</string>
     <string name="user_action_9" maxLength="28">User action 9</string>
     <string name="toggle_auto_advance" maxLength="28">Toggle auto advance</string>
+    <string name="enable_auto_advance" maxLength="28">Enable auto advance</string>
+    <string name="disable_auto_advance" maxLength="28">Disable auto advance</string>
+    <string name="enable_voice_recording" maxLength="28">Enable voice recording</string>
+    <string name="disable_voice_recording" maxLength="28">Disable voice recording</string>
     <!-- Select card side -->
     <string name="card_side_selection_title">Pilih sisi kad</string>
     <string name="card_side_question">Soalan</string>
@@ -291,6 +280,8 @@
     <string name="pref_cat_experimental" maxLength="41" tools:ignore="UnusedResources">Percubaan</string>
     <string name="readtext_deprecation_warn">AnkiDroid has introduced a better TTS mechanism which is compatible with other Anki clients and includes more voices and improvements to language playback!\n\nPlease upgrade as soon as possible, as this setting will be removed soon</string>
     <string name="readtext_reviewer_warn" tools:ignore="UnusedResources">Please upgrade to the new text to speech format</string>
+    <string name="allow_templates_to_record_audio" maxLength="41">Allow templates to record audio</string>
+    <string name="template_is_trying_to_record_audio">This template is trying to record audio</string>
     <string name="pref_fixed_port_title" maxLength="41">localStorage in Study Screen</string>
     <string name="pref_fixed_port_summary">Enables JavaScript localStorage by using a fixed server port in the Study Screen</string>
     <!-- Developer options -->
@@ -301,7 +292,8 @@
     <!-- #######################################################################################
          #################################### Backup options ###################################
          ####################################################################################### -->
-    <string name="pref__backups_help__summary"><![CDATA[        AnkiDroid sandarkan koleksi anda secara berkala
+    <string name="pref__backups_help__summary"><![CDATA[
+        AnkiDroid sandarkan koleksi anda secara berkala
         Setelah sandaran usianya lebih dua hari,
         AnkiDroid akan mula membuang sebahagian daripada mereka untuk mengosongkan ruang cakera.
         <br><br>

@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2022 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.workarounds
 
@@ -22,8 +8,8 @@ import android.os.Process
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.R
 import com.ichi2.anki.common.crashreporting.CrashReportService
-import com.ichi2.anki.exception.ManuallyReportedException
-import com.ichi2.anki.showThemedToast
+import com.ichi2.anki.common.exception.ManuallyReportedException
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.themes.Themes
 import timber.log.Timber
 
@@ -71,7 +57,7 @@ object AppLoadedFromBackupWorkaround {
 
         // fixes: java.lang.IllegalStateException: You need to use a Theme.AppCompat theme (or descendant) with this activity.
         // on Importer
-        Themes.setTheme(this)
+        Themes.setTheme(this, savedInstanceState)
         // Avoids a SuperNotCalledException
         activitySuperOnCreate(savedInstanceState)
         // Process.killProcess is a hard kill. I suspect that some Android OSes leave has the app in

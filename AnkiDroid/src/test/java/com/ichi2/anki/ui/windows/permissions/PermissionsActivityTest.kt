@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2023 Brayan Oliveira <brayandso.dev@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.ui.windows.permissions
 
 import android.content.Context
@@ -23,9 +10,11 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ActivityScenario.ActivityAction
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.OptionalPermissionSet
 import com.ichi2.anki.PermissionSet
 import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.StoragePermissionSet
 import com.ichi2.testutils.HamcrestUtils.containsInAnyOrder
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
@@ -55,7 +44,7 @@ class PermissionsActivityTest : RobolectricTest() {
     }
 
     @Test
-    fun `error toast is shown if PERMISSIONS_SET_EXTRA is missing`() {
+    fun `error toast is shown if EXTRA_PERMISSIONS_SET is missing`() {
         testInvalidActivityFinishes()
         assertThat(
             ShadowToast.getTextOfLatestToast(),
@@ -66,8 +55,9 @@ class PermissionsActivityTest : RobolectricTest() {
     @Test
     fun `Each screen starts normally and has the same permissions of a PermissionSet`() {
         testActivity { activity ->
-            for (permissionSet in PermissionSet.entries) {
-                val fragment = permissionSet.permissionsFragment?.getDeclaredConstructor()?.newInstance() ?: continue
+            val permissionSets: List<PermissionSet> = StoragePermissionSet.entries + OptionalPermissionSet.entries
+            for (permissionSet in permissionSets) {
+                val fragment = permissionSet.permissionsFragment.getDeclaredConstructor().newInstance()
                 activity.supportFragmentManager.commitNow {
                     replace(R.id.fragment_container, fragment)
                 }
@@ -84,7 +74,7 @@ class PermissionsActivityTest : RobolectricTest() {
     }
 
     private fun testActivity(
-        permissionSet: PermissionSet? = ARBITRARY_PERMISSION_SET,
+        permissionSet: StoragePermissionSet? = ARBITRARY_PERMISSION_SET,
         action: ActivityAction<PermissionsActivity>,
     ) {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -102,6 +92,6 @@ class PermissionsActivityTest : RobolectricTest() {
     }
 
     companion object {
-        val ARBITRARY_PERMISSION_SET = PermissionSet.entries.first()
+        val ARBITRARY_PERMISSION_SET = StoragePermissionSet.entries.first()
     }
 }

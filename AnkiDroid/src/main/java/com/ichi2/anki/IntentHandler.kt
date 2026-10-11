@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2015 Timothy Rae <perceptualchaos2@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2015 Timothy Rae <perceptualchaos2@gmail.com>
 
 package com.ichi2.anki
 
@@ -25,19 +12,27 @@ import androidx.annotation.CheckResult
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.TaskStackBuilder
 import androidx.core.content.FileProvider
-import androidx.core.content.IntentCompat
 import androidx.work.WorkManager
 import com.ichi2.anki.common.annotations.NeedsTest
-import com.ichi2.anki.common.utils.trimToLength
+import com.ichi2.anki.common.coroutines.applicationScope
+import com.ichi2.anki.common.destinations.BrowserDestination
+import com.ichi2.anki.common.destinations.NoteEditorDestination
+import com.ichi2.anki.common.destinations.addNextIntent
+import com.ichi2.anki.common.destinations.navigate
+import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.storage.CollectionHelper
+import com.ichi2.anki.common.storage.StorageDecision
+import com.ichi2.anki.common.storage.grantedStoragePermissions
+import com.ichi2.anki.common.utils.android.showThemedToast
+import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.anki.dialogs.DialogHandler.Companion.storeMessage
 import com.ichi2.anki.dialogs.DialogHandlerMessage
 import com.ichi2.anki.dialogs.requireDeckPickerOrShowError
 import com.ichi2.anki.dualscreen.mainDisplayLaunchOptions
 import com.ichi2.anki.exception.SystemStorageException
 import com.ichi2.anki.libanki.DeckId
-import com.ichi2.anki.noteeditor.NoteEditorLauncher
-import com.ichi2.anki.servicelayer.ScopedStorageService
 import com.ichi2.anki.settings.Prefs
+import com.ichi2.anki.shareddeck.SharedDecksDownloadFragment
 import com.ichi2.anki.ui.windows.reviewer.ReviewerFragment
 import com.ichi2.anki.utils.MimeTypeUtils
 import com.ichi2.anki.worker.SyncWorker
@@ -48,8 +43,7 @@ import com.ichi2.utils.ImportUtils.isInvalidViewIntent
 import com.ichi2.utils.ImportUtils.showImportUnsuccessfulDialog
 import com.ichi2.utils.IntentUtil.resolveMimeType
 import com.ichi2.utils.NetworkUtils
-import com.ichi2.utils.Permissions
-import com.ichi2.utils.Permissions.hasLegacyStorageAccessPermission
+import com.ichi2.utils.TruncatedString
 import com.ichi2.utils.copyToClipboard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,7 +83,6 @@ class IntentHandler : AbstractIntentHandler() {
             LaunchType.FILE_IMPORT ->
                 runIfStoragePermissions {
                     handleFileImport(intent, reloadIntent, action)
-                    finish()
                 }
             LaunchType.TEXT_IMPORT ->
                 runIfStoragePermissions {
@@ -108,6 +101,7 @@ class IntentHandler : AbstractIntentHandler() {
                 }
             LaunchType.SYNC -> runIfStoragePermissions { handleSyncIntent(reloadIntent, action) }
             LaunchType.REVIEW -> runIfStoragePermissions { handleReviewIntent(reloadIntent, intent) }
+            LaunchType.OPEN_BROWSER -> runIfStoragePermissions { handleBrowserIntent(intent) }
             LaunchType.DEFAULT_START_APP_IF_NEW -> {
                 Timber.d("onCreate() performing default action")
                 launchDeckPickerIfNoOtherTasks(reloadIntent)
@@ -121,9 +115,13 @@ class IntentHandler : AbstractIntentHandler() {
 
     private fun copyDebugInfoToClipboard(intent: Intent) {
         Timber.i("Copying debug info to clipboard")
-        // null string is handled by copyToClipboard in try-catch
+        val clipboardData =
+            intent.getStringExtra(EXTRA_CLIPBOARD_DATA) ?: run {
+                Timber.w("copyDebugInfoToClipboard: missing '%s' extra", EXTRA_CLIPBOARD_DATA)
+                return
+            }
         this.copyToClipboard(
-            text = (intent.getStringExtra(CLIPBOARD_INTENT_EXTRA_DATA)!!),
+            text = TruncatedString.from(clipboardData),
             failureMessageId = R.string.about_ankidroid_error_copy_debug_info,
         )
     }
@@ -135,6 +133,8 @@ class IntentHandler : AbstractIntentHandler() {
      *  * AnkiDroid is using a legacy directory to store user data but has access to it since storage permission
      * has been granted (as long as AnkiDroid targeted API < 30, requested legacy storage, and has not been uninstalled since)
      *
+     * The user must also have [decided][CollectionHelper.storageDecision] where data is stored;
+     * otherwise they are routed to the [DeckPicker].
      */
     @NeedsTest("clicking a file in 'Files' to import")
     private fun performActionIfStorageAccessible(
@@ -142,6 +142,12 @@ class IntentHandler : AbstractIntentHandler() {
         action: String?,
         block: () -> Unit,
     ) {
+        if (CollectionHelper.storageDecision(sharedPrefs()) != StorageDecision.Decided) {
+            // checked before permissions: the permissions required depend on the chosen folder
+            Timber.i("Storage is not configured, cancelling intent '%s'", action)
+            launchDeckPickerIfNoOtherTasks(reloadIntent)
+            return
+        }
         if (grantedStoragePermissions(this, showToast = true)) {
             Timber.i("User has storage permissions. Running intent: %s", action)
             block()
@@ -151,11 +157,28 @@ class IntentHandler : AbstractIntentHandler() {
         }
     }
 
+    /**
+     * Opens [CardBrowser] standalone in response to `anki://x-callback-url/browser`.
+     */
+    private fun handleBrowserIntent(intent: Intent) {
+        Timber.i("Handling intent to open the Card Browser")
+        val search = intent.data?.getQueryParameter("search")
+        val destination =
+            if (search != null) {
+                BrowserDestination.Search(query = search, allDecks = false)
+            } else {
+                BrowserDestination.Open
+            }
+        // 'back' should close this activity.
+        navigate(destination)
+        finish()
+    }
+
     private fun handleReviewIntent(
         reloadIntent: Intent,
         reviewerIntent: Intent,
     ) {
-        val deckId = intent.getLongExtra(REVIEW_DECK_INTENT_EXTRA_DECK_ID, 0)
+        val deckId = intent.getLongExtra(EXTRA_DECK_ID, 0)
         Timber.i("Handling intent to review deck '%d'", deckId)
 
         val reviewIntent =
@@ -198,6 +221,7 @@ class IntentHandler : AbstractIntentHandler() {
         if (!hasShownAppIntro()) {
             Timber.i("Trying to import a file when the app was not started at all")
             showThemedToast(this, R.string.app_not_initialized_new, false)
+            finish()
             return
         }
         val importResult = handleFileImport(this, intent)
@@ -227,7 +251,7 @@ class IntentHandler : AbstractIntentHandler() {
         // TODO improve the handling of the imported temporary files
         // Launching this scope without tying it to a lifecycle since ,
         // IntentHandler finishes quickly, but deletion may still be in progress
-        AnkiDroidApp.applicationScope.launch(Dispatchers.IO) {
+        applicationScope.launch(Dispatchers.IO) {
             try {
                 val file = File(path!!)
                 val fileUri =
@@ -252,31 +276,26 @@ class IntentHandler : AbstractIntentHandler() {
     private fun handleImageImport(data: Intent) {
         val imageUri =
             if (intent.action == Intent.ACTION_SEND) {
-                IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+                intent.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM)
             } else {
                 data.data
             }
 
-        val intentImageOcclusion = NoteEditorLauncher.ImageOcclusion(imageUri).toIntent(this)
-
         TaskStackBuilder
             .create(this)
             .addNextIntentWithParentStack(Intent(this, DeckPicker::class.java))
-            .addNextIntent(intentImageOcclusion)
+            .addNextIntent(NoteEditorDestination.ImageOcclusion(imageUri))
             .startActivities()
     }
 
     private fun handleSharedText(data: Intent) {
         Timber.i("Handling shared text content for note creation")
-        val noteEditorIntent =
-            if (data.extras != null) {
-                NoteEditorLauncher.PassArguments(data.extras!!).toIntent(this, data.action)
-            } else {
+        val destination =
+            data.extras
+                ?.let { NoteEditorDestination.PassArguments.from(data, it) }
                 // Fallback if no extras, though this shouldn't happen for ACTION_SEND
-                NoteEditorLauncher.AddNote().toIntent(this)
-            }
-        noteEditorIntent.setDataAndType(data.data, data.type)
-        startActivity(noteEditorIntent)
+                ?: NoteEditorDestination.AddNote()
+        navigate(destination)
     }
 
     private fun deleteDownloadedDeck(sharedDeckUri: Uri?) {
@@ -287,7 +306,7 @@ class IntentHandler : AbstractIntentHandler() {
         // TODO improve the handling of the imported temporary files
         // Launching this scope without tying it to a lifecycle since ,
         // IntentHandler finishes quickly, but deletion may still be in progress
-        AnkiDroidApp.applicationScope.launch(Dispatchers.IO) {
+        applicationScope.launch(Dispatchers.IO) {
             try {
                 contentResolver.delete(sharedDeckUri, null, null)
                 Timber.i("onCreate: downloaded shared deck deleted")
@@ -327,13 +346,16 @@ class IntentHandler : AbstractIntentHandler() {
 
         SYNC,
         REVIEW,
+
+        /** `anki://x-callback-url/browser` deep link */
+        OPEN_BROWSER,
         COPY_DEBUG_INFO,
     }
 
     companion object {
-        const val REVIEW_DECK_INTENT_EXTRA_DECK_ID = "EXTRA_DECK_ID"
+        const val EXTRA_DECK_ID = "EXTRA_DECK_ID"
         private const val CLIPBOARD_INTENT = "com.ichi2.anki.COPY_DEBUG_INFO"
-        private const val CLIPBOARD_INTENT_EXTRA_DATA = "clip_data"
+        private const val EXTRA_CLIPBOARD_DATA = "clip_data"
 
         private val textMimeTypes = MimeTypeUtils.CSV_TSV_MIME_TYPES
 
@@ -353,10 +375,7 @@ class IntentHandler : AbstractIntentHandler() {
             context: Context,
             showToast: Boolean,
         ): Boolean {
-            val granted =
-                !ScopedStorageService.isLegacyStorage(context) ||
-                    hasLegacyStorageAccessPermission(context) ||
-                    Permissions.isExternalStorageManagerCompat()
+            val granted = grantedStoragePermissions(context)
 
             if (!granted && showToast) {
                 showThemedToast(context, context.getString(R.string.intent_handler_failed_no_storage_permission), false)
@@ -365,11 +384,22 @@ class IntentHandler : AbstractIntentHandler() {
             return granted
         }
 
+        /** Whether this is the `anki://x-callback-url/browser` deep link that opens the [CardBrowser]. */
+        private fun Intent.isBrowserDeepLink(): Boolean {
+            val data = data ?: return false
+            return action == Intent.ACTION_VIEW &&
+                data.scheme == "anki" &&
+                data.host == "x-callback-url" &&
+                data.path == "/browser"
+        }
+
         @VisibleForTesting
         @CheckResult
         fun getLaunchType(intent: Intent): LaunchType {
             val action = intent.action
-            return if (action == Intent.ACTION_SEND || (Intent.ACTION_VIEW == action && isValidViewIntent(intent))) {
+            return if (intent.isBrowserDeepLink()) {
+                LaunchType.OPEN_BROWSER
+            } else if (action == Intent.ACTION_SEND || (Intent.ACTION_VIEW == action && isValidViewIntent(intent))) {
                 val mimeType = intent.resolveMimeType()
                 when {
                     mimeType?.startsWith("image/") == true -> LaunchType.IMAGE_IMPORT
@@ -381,7 +411,7 @@ class IntentHandler : AbstractIntentHandler() {
                 }
             } else if ("com.ichi2.anki.DO_SYNC" == action) {
                 LaunchType.SYNC
-            } else if (intent.hasExtra(REVIEW_DECK_INTENT_EXTRA_DECK_ID)) {
+            } else if (intent.hasExtra(EXTRA_DECK_ID)) {
                 LaunchType.REVIEW
             } else if (action == CLIPBOARD_INTENT) {
                 LaunchType.COPY_DEBUG_INFO
@@ -398,16 +428,6 @@ class IntentHandler : AbstractIntentHandler() {
             storeMessage(DoSync().toMessage())
         }
 
-        fun copyStringToClipboardIntent(
-            context: Context,
-            textToCopy: String,
-        ) = Intent(context, IntentHandler::class.java).also {
-            it.action = CLIPBOARD_INTENT
-            // max length for an intent is 500KB.
-            // 25000 * 2 (bytes per char) = 50,000 bytes <<< 500KB
-            it.putExtra(CLIPBOARD_INTENT_EXTRA_DATA, textToCopy.trimToLength(25000))
-        }
-
         fun requiresCollectionAccess(launchType: LaunchType): Boolean =
             when (launchType) {
                 LaunchType.SYNC,
@@ -417,6 +437,7 @@ class IntentHandler : AbstractIntentHandler() {
                 LaunchType.TEXT_IMPORT,
                 LaunchType.IMAGE_IMPORT,
                 LaunchType.SHARED_TEXT,
+                LaunchType.OPEN_BROWSER,
                 -> true
                 LaunchType.COPY_DEBUG_INFO -> false
             }
@@ -448,12 +469,12 @@ class IntentHandler : AbstractIntentHandler() {
                                 remaining,
                                 remaining,
                             )
-                        deckPicker.showSimpleNotification(err, message, Channel.SYNC)
+                        deckPicker.showSimpleNotification(err, message, NotificationChannel.SYNC)
                     } else {
                         deckPicker.showSimpleNotification(
                             err,
                             res.getString(R.string.youre_offline),
-                            Channel.SYNC,
+                            NotificationChannel.SYNC,
                         )
                     }
                 }
@@ -479,20 +500,6 @@ class IntentHandler : AbstractIntentHandler() {
         fun getReviewDeckIntent(
             context: Context,
             deckId: DeckId,
-        ): Intent = Intent(context, IntentHandler::class.java).putExtra(REVIEW_DECK_INTENT_EXTRA_DECK_ID, deckId)
-
-        /**
-         * Returns an intent to review a specific deck.
-         * This does not states which reviewer to use, instead IntentHandler will choose whether to use the
-         * legacy or the new reviewer based on the "newReviewer" preference.
-         * It is expected to be used from widget, shortcut, reminders but not from ankidroid directly because of the CLEAR_TOP flag.
-         */
-        fun intentToReviewDeckFromShortcuts(
-            context: Context,
-            deckId: DeckId,
-        ) = Intent(context, IntentHandler::class.java).apply {
-            setAction(Intent.ACTION_VIEW)
-            putExtra(REVIEW_DECK_INTENT_EXTRA_DECK_ID, deckId)
-        }
+        ): Intent = Intent(context, IntentHandler::class.java).putExtra(EXTRA_DECK_ID, deckId)
     }
 }

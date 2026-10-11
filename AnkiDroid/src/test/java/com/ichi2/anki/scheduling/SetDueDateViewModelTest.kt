@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2024 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.scheduling
 
@@ -38,6 +24,22 @@ class SetDueDateViewModelTest : JvmTest() {
             assertThat("card count", cardCount, equalTo(2))
             assertThat("is not valid", !isValid)
             assertThat("initial tab is single day", currentTab, equalTo(Tab.SINGLE_DAY))
+        }
+
+    @Test
+    fun `submission waits for scheduler initialization`() =
+        runTest {
+            val viewModel = SetDueDateViewModel()
+            viewModel.nextSingleDayDueDate = 3
+
+            assertFalse(viewModel.isValid, "valid input cannot be submitted before the scheduler setting is known")
+            assertThat(viewModel.calculateDaysParameter(), equalTo(null))
+            assertThat("keyboard submission is also guarded", viewModel.updateDueDateAsync().await(), equalTo(null))
+
+            viewModel.init(cardIds = listOf(1, 2), fsrsEnabled = true)
+
+            assertTrue(viewModel.isValid, "existing input becomes valid once the scheduler setting is known")
+            assertThat(viewModel.calculateDaysParameter(), equalTo(SetDueDateDays("3!")))
         }
 
     @Test
@@ -172,7 +174,7 @@ class SetDueDateViewModelTest : JvmTest() {
         testBody: suspend SetDueDateViewModel.() -> Unit,
     ) = runTest {
         val viewModel = SetDueDateViewModel()
-        viewModel.init(cardIds.toLongArray(), fsrsEnabled = fsrsEnabled)
+        viewModel.init(cardIds, fsrsEnabled = fsrsEnabled)
         testBody(viewModel)
     }
 }

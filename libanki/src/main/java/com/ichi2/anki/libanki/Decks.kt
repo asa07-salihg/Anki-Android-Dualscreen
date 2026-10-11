@@ -220,6 +220,9 @@ class Decks(
         )
     }
 
+    /**
+     * Returns the root node of the deck tree without counts as it uses the browser collapsed state.
+     */
     @LibAnkiAlias("deck_tree")
     @Suppress("unused")
     fun deckTree(): DeckTreeNode = col.backend.deckTree(now = 0)
@@ -564,17 +567,15 @@ class Decks(
         }
     }
 
-    /** Select a new branch (deck and descendants). */
+    /**
+     * Select a new branch (deck and descendants).
+     *
+     * @see setCurrent includes `undoableOp` support - use for UI code.
+     */
     @LibAnkiAlias("select")
-    @RustCleanup("does not match upstream")
+    @Suppress("CheckResult")
     fun select(did: DeckId) {
-        col.backend.setCurrentDeck(did)
-        val selectedDeckName = name(did)
-        val childrenDids =
-            allNamesAndIds(skipEmptyDefault = true, includeFiltered = false)
-                .filter { it.name.startsWith("$selectedDeckName::") }
-                .map { it.id }
-        col.config.set(ACTIVE_DECKS, listOf(did) + childrenDids)
+        setCurrent(did)
     }
 
     /** @return The currently selected deck ID. */
@@ -739,9 +740,6 @@ class Decks(
 
         /** Configuration saving the current deck  */
         const val CURRENT_DECK = "curDeck"
-
-        /** Configuration saving the set of active decks (i.e. current decks and its descendants)  */
-        const val ACTIVE_DECKS = "activeDecks"
 
         @NotInPyLib
         const val DECK_SEPARATOR = "::"

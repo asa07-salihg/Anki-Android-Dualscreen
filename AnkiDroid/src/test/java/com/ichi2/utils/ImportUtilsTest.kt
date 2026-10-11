@@ -1,18 +1,5 @@
-/*
- Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
+// SPDX-License-Identifier: GPL-3.0-or-later
 
- This program is free software; you can redistribute it and/or modify it under
- the terms of the GNU General Public License as published by the Free Software
- Foundation; either version 3 of the License, or (at your option) any later
- version.
-
- This program is distributed in the hope that it will be useful, but WITHOUT ANY
- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License along with
- this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 package com.ichi2.utils
 
 import android.content.ClipData
@@ -24,25 +11,102 @@ import android.net.Uri
 import androidx.annotation.CheckResult
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.R
 import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.common.crashreporting.CrashReporter
 import com.ichi2.utils.ImportUtils.FileImporter
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.endsWith
 import org.hamcrest.Matchers.lessThanOrEqualTo
 import org.hamcrest.Matchers.not
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.robolectric.Shadows.shadowOf
 import java.io.File
+import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.InputStream
+import kotlin.test.assertIs
 
+/** Tests for [ImportUtils]. */
 @RunWith(AndroidJUnit4::class)
 class ImportUtilsTest : RobolectricTest() {
+    private lateinit var originalCrashReporter: CrashReporter
+    private val crashReporter = mock(CrashReporter::class.java)
+
+    @Before
+    fun captureCrashReports() {
+        originalCrashReporter = CrashReportService.getReporter()
+        CrashReportService.setReporter(crashReporter)
+    }
+
+    @After
+    fun restoreCrashReporter() {
+        CrashReportService.setReporter(originalCrashReporter)
+    }
+
+    @Test
+    fun `missing source file returns an import failure without a crash report`() {
+        val uri = "content://import/deleted.apkg".toUri()
+        val missingFile = File(tempFolder.root, "deleted.apkg")
+        shadowOf(targetContext.contentResolver).registerInputStreamSupplier(uri) { missingFile.inputStream() }
+
+        val result = importerWithFileName("deleted.apkg").handleFileImport(targetContext, Intent(Intent.ACTION_VIEW, uri))
+
+        val failure = assertIs<ImportResult.Failure>(result)
+        assertIs<FileNotFoundException>(failure.exception)
+        assertEquals(targetContext.getString(R.string.import_error_copy_to_cache_title), failure.title)
+        verifyNoInteractions(crashReporter)
+    }
+
+    @Test
+    fun `unexpected source errors are still reported`() {
+        val uri = "content://import/broken.apkg".toUri()
+        val exception = IOException("Provider failed")
+        shadowOf(targetContext.contentResolver).registerInputStreamSupplier(uri) { throw exception }
+
+        val result = importerWithFileName("broken.apkg").handleFileImport(targetContext, Intent(Intent.ACTION_VIEW, uri))
+
+        assertEquals(exception, assertIs<ImportResult.Failure>(result).exception)
+        verify(crashReporter).sendExceptionReport(exception, "ImportUtils", null, false)
+    }
+
+    @Test
+    fun `file not found while reading an open source is still reported`() {
+        val uri = "content://import/unreadable.apkg".toUri()
+        val exception = FileNotFoundException("Read failed after opening")
+        shadowOf(targetContext.contentResolver).registerInputStreamSupplier(uri) {
+            object : InputStream() {
+                override fun read(): Int = throw exception
+            }
+        }
+
+        val result = importerWithFileName("unreadable.apkg").handleFileImport(targetContext, Intent(Intent.ACTION_VIEW, uri))
+
+        assertEquals(exception, assertIs<ImportResult.Failure>(result).exception)
+        verify(crashReporter).sendExceptionReport(exception, "ImportUtils", null, false)
+    }
+
+    private fun importerWithFileName(fileName: String): FileImporter =
+        object : FileImporter() {
+            override fun getFileNameFromContentProvider(
+                context: Context,
+                data: Uri,
+            ): String = fileName
+        }
+
     @Test
     fun cjkNamesAreConvertedToUnicode() {
         // NOTE: I don't know whether this still needs to exist, but it was added as this previously crashes
@@ -80,6 +144,53 @@ class ImportUtilsTest : RobolectricTest() {
 
         // COULD_BE_BETTER: Strip off the file path
         return testFileImporter.cacheFileName
+    }
+
+    @Test
+    fun pathTraversalInFileNameIsRejected() {
+        // GHSA-q29p-h3pp-mh3v — Path traversal via import DISPLAY_NAME should be blocked
+        val cacheDir = targetContext.cacheDir.canonicalFile
+        val maliciousFilenames =
+            listOf(
+                "../etc/passwd.apkg",
+                "..\\windows\\system32\\config.sam.apkg",
+                "../../../../../../../../../etc/passwd.apkg",
+                "..\\..\\..\\passwd.apkg",
+                "%2e%2e%2fetc%2fpasswd.apkg", // percent-encoded traversal: File does not decode it
+                "....apkg",
+                "normal.apkg",
+            )
+
+        for (maliciousFilename in maliciousFilenames) {
+            val testFileImporter = TestFileImporter(maliciousFilename)
+            val intent = getValidClipDataUri(maliciousFilename)
+            val result = testFileImporter.handleFileImport(targetContext, intent)
+            assertTrue("Import should succeed after basename sanitization: $maliciousFilename", result is ImportResult.Success)
+
+            // the cached path is Uri-encoded (see handleContentProviderFile): decode it before resolving it on disk
+            val cachedFile = File(Uri.decode(testFileImporter.cacheFileName)).canonicalFile
+            assertEquals(
+                "Cached file must be a direct child of cacheDir: $maliciousFilename -> $cachedFile",
+                cacheDir,
+                cachedFile.parentFile,
+            )
+        }
+    }
+
+    @Test
+    fun leadingDotFilenamesAreNotStripped() {
+        for (fileName in listOf(".hidden.apkg", "..apkg")) {
+            val actualFilePath = importValidFile(fileName)
+            assertEquals(fileName, File(Uri.decode(actualFilePath)).name)
+        }
+    }
+
+    @Test
+    fun getFileCachedCopyUsesUnnamedFileForEmptyDotAndDotDot() {
+        for (fileName in listOf("", ".", "..")) {
+            val actualFilepath = TestFileImporter(fileName).getFileCachedCopy(targetContext, "dummy".toUri())
+            assertEquals(File(targetContext.cacheDir, "unnamed_file").absolutePath, actualFilepath)
+        }
     }
 
     @Test
@@ -159,56 +270,6 @@ class ImportUtilsTest : RobolectricTest() {
         val context = mock(Context::class.java)
         whenever(context.contentResolver).thenReturn(resolver)
         return context
-    }
-
-    @Test
-    fun pathTraversalInFileNameIsRejected() {
-        // GHSA-q29p-h3pp-mh3v — Path traversal via import DISPLAY_NAME should be blocked.
-        // Canonical containment under cacheDir + separator must fail pre-fix for ../etc/passwd.apkg
-        // (File(cacheDir, that name) resolves outside cache).
-        val cacheRoot = targetContext.cacheDir.canonicalPath + File.separator
-        val maliciousFilenames =
-            listOf(
-                "../etc/passwd.apkg",
-                "..\\windows\\system32\\config.sam.apkg",
-                "../../../../../../../../../etc/passwd.apkg",
-                "..\\..\\..\\passwd.apkg",
-                "normal.apkg", // legitimate file should still work
-                "%2e%2e%2fetc%2fpasswd.apkg", // double-encoded path traversal
-                "....apkg", // odd-length dot sequence edge case
-            )
-
-        for (maliciousFilename in maliciousFilenames) {
-            val testFileImporter = TestFileImporter(maliciousFilename)
-            val intent = getValidClipDataUri(maliciousFilename)
-            val result = testFileImporter.handleFileImport(targetContext, intent)
-            assertTrue("import should succeed after sanitization: $maliciousFilename", result is ImportResult.Success)
-
-            val cachedCanonical = File(testFileImporter.cacheFileName).canonicalPath
-            assertTrue(
-                "cached copy must stay under cacheDir for: $maliciousFilename (was $cachedCanonical)",
-                cachedCanonical.startsWith(cacheRoot),
-            )
-        }
-    }
-
-    @Test
-    fun leadingDotFilenamesAreNotStripped() {
-        for (fileName in listOf(".hidden.apkg", "..apkg")) {
-            val actualFilePath = importValidFile(fileName)
-            assertThat(actualFilePath, endsWith("${File.separator}$fileName"))
-        }
-    }
-
-    @Test
-    fun getFileCachedCopyUsesUnnamedFileForEmptyDotAndDotDot() {
-        for (fileName in listOf("", ".", "..")) {
-            val actualFilepath = TestFileImporter(fileName).getFileCachedCopy(targetContext, "dummy".toUri())
-            assertEquals(
-                File(targetContext.cacheDir, "unnamed_file").absolutePath,
-                actualFilepath,
-            )
-        }
     }
 
     @CheckResult

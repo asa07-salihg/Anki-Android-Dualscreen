@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2022 Akshit Sinha <akshitsinha3@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2022 Akshit Sinha <akshitsinha3@gmail.com>
 
 package com.ichi2.anki.dialogs
 
@@ -49,12 +36,11 @@ class DeckSelectionDialogTest : RobolectricTest() {
         val decks: List<SelectableDeck> = listOf(SelectableDeck.Deck(5L, "deck"))
         val dialogTitle = "Select Deck"
         val summaryMessage = "Choose a deck from the list"
-        val keepRestoreDefaultButton = true
 
-        val dialog = DeckSelectionDialog.newInstance(dialogTitle, summaryMessage, keepRestoreDefaultButton, decks)
+        val dialog = DeckSelectionDialog.newInstance(title = dialogTitle, templateEditorMessage = summaryMessage, decks = decks)
         assertNotNull(dialog)
-        assertEquals(dialogTitle, dialog.arguments?.getString("title"))
-        assertEquals(summaryMessage, dialog.arguments?.getString("summaryMessage"))
+        assertEquals(dialogTitle, dialog.arguments?.getString("arg_title"))
+        assertEquals(summaryMessage, dialog.arguments?.getString("arg_template_editor_message"))
     }
 
     @Test

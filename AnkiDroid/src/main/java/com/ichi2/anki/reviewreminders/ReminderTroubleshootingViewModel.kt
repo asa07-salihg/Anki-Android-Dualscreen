@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2025 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.reviewreminders
 
@@ -68,6 +54,14 @@ sealed class TroubleshootingCheck {
     abstract val result: CheckResult
 
     data class NotificationPermission(
+        override val result: CheckResult = CheckResult.Loading,
+    ) : TroubleshootingCheck()
+
+    /**
+     * Checks whether the notification channel for review reminders is enabled. Individual channels
+     * can be enabled or disabled by the user on certain operating systems at and above Oreo (API 26).
+     */
+    data class NotificationChannelEnabled(
         override val result: CheckResult = CheckResult.Loading,
     ) : TroubleshootingCheck()
 
@@ -139,13 +133,18 @@ enum class SummaryStatus {
     /** Other checks have warnings or failures — reminders may not work correctly. */
     Warning,
 
-    /** Notification permission is denied or errored — reminders cannot work. */
+    /**
+     * The notification permission or the review reminders notification channel is
+     * denied/disabled or errored — reminders cannot work.
+     */
     Error,
 }
 
 data class ReminderTroubleshootingState(
     val notificationPermission: TroubleshootingCheck.NotificationPermission =
         TroubleshootingCheck.NotificationPermission(),
+    val notificationChannelEnabled: TroubleshootingCheck.NotificationChannelEnabled =
+        TroubleshootingCheck.NotificationChannelEnabled(),
     val doNotDisturbOff: TroubleshootingCheck.DoNotDisturbOff =
         TroubleshootingCheck.DoNotDisturbOff(),
     val batteryOptimizationDisabled: TroubleshootingCheck.UnrestrictedOptimizationEnabled =
@@ -159,6 +158,7 @@ data class ReminderTroubleshootingState(
         get() =
             listOf(
                 notificationPermission,
+                notificationChannelEnabled,
                 doNotDisturbOff,
                 batteryOptimizationDisabled,
                 powerSavingModeOff,
@@ -172,9 +172,10 @@ data class ReminderTroubleshootingState(
      */
     val summaryStatus: SummaryStatus
         get() {
-            // If the notification permission is defined, notifications cannot be shown.
-            val permissionCheck = notificationPermission.result
-            if (permissionCheck is CheckResult.Failed || permissionCheck is CheckResult.Error) {
+            // If the notification permission is denied, or the review reminders notification
+            // channel is disabled, notifications cannot be shown.
+            val blockingChecks = listOf(notificationPermission.result, notificationChannelEnabled.result)
+            if (blockingChecks.any { it is CheckResult.Failed || it is CheckResult.Error }) {
                 return SummaryStatus.Error
             }
 
@@ -203,6 +204,10 @@ class ReminderTroubleshootingViewModel(
                 notificationPermission =
                     state.value.notificationPermission.copy(
                         result = CheckResult.from(repository::isNotificationPermissionGranted, onFailure = CheckResult.Failed),
+                    ),
+                notificationChannelEnabled =
+                    state.value.notificationChannelEnabled.copy(
+                        result = CheckResult.from(repository::isNotificationChannelEnabled, onFailure = CheckResult.Failed),
                     ),
                 doNotDisturbOff =
                     state.value.doNotDisturbOff.copy(

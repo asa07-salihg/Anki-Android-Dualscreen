@@ -1,6 +1,4 @@
 /*
- *  Copyright (c) 2024 David Allison <davidallisongithub@gmail.com>
- *
  *  This program is free software; you can redistribute it and/or modify it under
  *  the terms of the GNU General Public License as published by the Free Software
  *  Foundation; either version 3 of the License, or (at your option) any later
@@ -35,7 +33,7 @@
  * * Convert to Kotlin
  * * Remove Hungarian Notation
  * * Rely on `ListPreferenceTrait` rather than `ListPreference`
- * * `bundleOf` + `.apply` usage
+ * * `Bundle().apply` usage
  * * `if (preference.callChangeListener(value)) {` - depend on `preference` and `listPreference`
  */
 
@@ -44,7 +42,6 @@ package com.ichi2.preferences
 import android.content.DialogInterface
 import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
-import androidx.core.os.bundleOf
 import androidx.preference.ListPreferenceDialogFragmentCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceDialogFragmentCompat
@@ -151,7 +148,7 @@ class ListPreferenceDialogFragment : PreferenceDialogFragmentCompat() {
 
         fun newInstance(key: String?): ListPreferenceDialogFragment =
             ListPreferenceDialogFragment().apply {
-                arguments = bundleOf(ARG_KEY to key)
+                arguments = Bundle().apply { putString(ARG_KEY, key) }
             }
     }
 }

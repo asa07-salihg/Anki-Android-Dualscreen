@@ -1,21 +1,8 @@
-/*
- *
- * Copyright (c) 2015 Frank Oltmanns <frank.oltmanns@gmail.com>
- * Copyright (c) 2015 Timothy Rae <timothy.rae@gmail.com>
- * Copyright (c) 2016 Mark Carter <mark@marcardar.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2015 Frank Oltmanns <frank.oltmanns@gmail.com>
+// SPDX-FileCopyrightText: Copyright (c) 2015 Timothy Rae <timothy.rae@gmail.com>
+// SPDX-FileCopyrightText: Copyright (c) 2016 Mark Carter <mark@marcardar.com>
+
 package com.ichi2.anki.provider
 
 import android.annotation.SuppressLint
@@ -35,9 +22,11 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.FlashCardsContract
+import com.ichi2.anki.api.Flag
 import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
+import com.ichi2.anki.exception.StorageNotConfiguredException
 import com.ichi2.anki.libanki.Card
 import com.ichi2.anki.libanki.CardId
 import com.ichi2.anki.libanki.CardTemplate
@@ -57,6 +46,7 @@ import com.ichi2.anki.libanki.Utils
 import com.ichi2.anki.libanki.exception.ConfirmModSchemaException
 import com.ichi2.anki.libanki.exception.EmptyMediaException
 import com.ichi2.anki.libanki.sched.DeckNode
+import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.utils.FileUtil
 import com.ichi2.utils.FileUtil.internalizeUri
 import com.ichi2.utils.Permissions.arePermissionsDefinedInManifest
@@ -220,6 +210,20 @@ class CardContentProvider : ContentProvider() {
      */
     private fun shouldEnforceUpdateSecurity(uri: Uri): Boolean = true
 
+    /**
+     * The collection, opened if necessary.
+     *
+     * @throws IllegalStateException if the user has not yet chosen where the collection is
+     * stored.
+     */
+    private fun getColUnsafe(): Collection =
+        try {
+            CollectionManager.getColUnsafe()
+        } catch (e: StorageNotConfiguredException) {
+            // StorageNotConfiguredException is not supported by Parcel.writeException
+            throw IllegalStateException("AnkiDroid storage is not configured", e)
+        }
+
     override fun query(
         uri: Uri,
         projection: Array<String>?,
@@ -230,7 +234,7 @@ class CardContentProvider : ContentProvider() {
         if (!hasReadWritePermission() && shouldEnforceQueryOrInsertSecurity()) {
             throwSecurityException("query", uri)
         }
-        val col = CollectionManager.getColUnsafe()
+        val col = getColUnsafe()
         Timber.d(getLogMessage("query", uri))
 
         // Find out what data the user is requesting
@@ -484,7 +488,7 @@ class CardContentProvider : ContentProvider() {
         if (!hasReadWritePermission() && shouldEnforceUpdateSecurity(uri)) {
             throwSecurityException("update", uri)
         }
-        val col = CollectionManager.getColUnsafe()
+        val col = getColUnsafe()
         Timber.d(getLogMessage("update", uri))
 
         // Find out what data the user is requesting
@@ -537,28 +541,38 @@ class CardContentProvider : ContentProvider() {
             NOTES_ID_CARDS -> throw UnsupportedOperationException("Not yet implemented")
             NOTES_ID_CARDS_ORD -> {
                 val currentCard = getCardFromUri(uri, col)
-                var isDeckUpdate = false
-                var did = Decks.NOT_FOUND_DECK_ID
                 // the key of the ContentValues contains the column name
                 // the value of the ContentValues contains the row value.
                 val valueSet = values!!.valueSet()
                 for ((key) in valueSet) {
-                    // Only updates on deck id is supported
-                    isDeckUpdate = key == FlashCardsContract.Card.DECK_ID
-                    did = values.getAsLong(key)
-                }
-                require(!col.decks.isFiltered(did)) { "Cards cannot be moved to a filtered deck" }
-                /* now update the card
-                 */
-                if (isDeckUpdate && did >= 0) {
-                    Timber.d("CardContentProvider: Moving card to other deck...")
-                    currentCard.did = did
-                    col.updateCard(currentCard)
+                    when (key) {
+                        FlashCardsContract.Card.DECK_ID -> {
+                            val did = values.getAsLong(key)
+                            require(!col.decks.isFiltered(did)) { "Cards cannot be moved to a filtered deck" }
 
-                    updated++
-                } else {
-                    // User tries an operation that is not (yet?) supported.
-                    throw IllegalArgumentException("Currently only updates of decks are supported")
+                            Timber.d("CardContentProvider: Moving card to other deck...")
+                            currentCard.did = did
+                            col.updateCard(currentCard)
+
+                            updated++
+                        }
+                        FlashCardsContract.Card.FLAGS -> {
+                            val flags = values.getAsInteger(key)
+
+                            if (flags == null || flags < Flag.MIN_CODE || flags > Flag.MAX_CODE) {
+                                throw IllegalArgumentException("Flags value must be in the range from ${Flag.MIN_CODE} to ${Flag.MAX_CODE}")
+                            }
+
+                            Timber.d("CardContentProvider: flags update...")
+                            currentCard.setUserFlag(flags)
+                            col.updateCard(currentCard)
+                            updated++
+                        }
+                        else -> {
+                            // User tries an operation that is not (yet?) supported.
+                            throw IllegalArgumentException("Currently only updates of decks and flags are supported")
+                        }
+                    }
                 }
             }
             NOTE_TYPES -> throw IllegalArgumentException("Cannot update models in bulk")
@@ -731,6 +745,11 @@ class CardContentProvider : ContentProvider() {
             }
             else -> throw IllegalArgumentException("uri $uri is not supported")
         }
+
+        if (updated > 0) {
+            notifyAllValuesChanged()
+        }
+
         return updated
     }
 
@@ -742,20 +761,28 @@ class CardContentProvider : ContentProvider() {
         if (!hasReadWritePermission()) {
             throwSecurityException("delete", uri)
         }
-        val col = CollectionManager.getColUnsafe()
+        val col = getColUnsafe()
         Timber.d(getLogMessage("delete", uri))
-        return when (sUriMatcher.match(uri)) {
-            NOTES_ID -> {
-                col.removeNotes(noteIds = listOf(uri.pathSegments[1].toLong()))
-                1
+
+        val deletedCount =
+            when (sUriMatcher.match(uri)) {
+                NOTES_ID -> {
+                    col.removeNotes(noteIds = listOf(uri.pathSegments[1].toLong())).count
+                }
+                NOTE_TYPES_ID_EMPTY_CARDS -> {
+                    val noteType = col.notetypes.get(getNoteTypeIdFromUri(uri, col)) ?: return -1
+                    val cardIdsToRemove = noteType.getEmptyCardIds(col)
+
+                    col.removeCardsAndOrphanedNotes(cardIdsToRemove).count
+                }
+                else -> throw UnsupportedOperationException()
             }
-            NOTE_TYPES_ID_EMPTY_CARDS -> {
-                val noteType = col.notetypes.get(getNoteTypeIdFromUri(uri, col)) ?: return -1
-                val cardIdsToRemove = noteType.getEmptyCardIds(col)
-                return col.removeCardsAndOrphanedNotes(cardIdsToRemove).count
-            }
-            else -> throw UnsupportedOperationException()
+
+        if (deletedCount > 0) {
+            notifyAllValuesChanged()
         }
+
+        return deletedCount
     }
 
     /**
@@ -778,19 +805,29 @@ class CardContentProvider : ContentProvider() {
         // by default, #bulkInsert simply calls insert for each item in #values
         // but in some cases, we want to override this behavior
         val match = sUriMatcher.match(uri)
-        if (match == NOTES) {
-            val deckIdStr = uri.getQueryParameter(FlashCardsContract.Note.DECK_ID_QUERY_PARAM)
-            if (deckIdStr != null) {
-                try {
-                    val deckId = deckIdStr.toLong()
-                    return bulkInsertNotes(values, deckId)
-                } catch (e: NumberFormatException) {
-                    Timber.d(e, "Invalid %s: %s", FlashCardsContract.Note.DECK_ID_QUERY_PARAM, deckIdStr)
-                }
+        val deckIdStr = uri.getQueryParameter(FlashCardsContract.Note.DECK_ID_QUERY_PARAM)
+
+        val deckId =
+            try {
+                deckIdStr?.toLong()
+            } catch (e: NumberFormatException) {
+                Timber.d(e, "Invalid %s: %s", FlashCardsContract.Note.DECK_ID_QUERY_PARAM, deckIdStr)
+                null
             }
-            // deckId not specified, so default to #super implementation (as in spec version 1)
+
+        val insertedCount =
+            if (match == NOTES && deckId != null) {
+                bulkInsertNotes(values, deckId)
+            } else {
+                // deckId not specified, so default to #super implementation (as in spec version 1)
+                super.bulkInsert(uri, values)
+            }
+
+        if (insertedCount > 0) {
+            notifyAllValuesChanged()
         }
-        return super.bulkInsert(uri, values)
+
+        return insertedCount
     }
 
     /**
@@ -803,7 +840,7 @@ class CardContentProvider : ContentProvider() {
         if (valuesArr.isNullOrEmpty()) {
             return 0
         }
-        val col = CollectionManager.getColUnsafe()
+        val col = getColUnsafe()
         if (col.decks.isFiltered(deckId)) {
             throw IllegalArgumentException("A filtered deck cannot be specified as the deck in bulkInsertNotes")
         }
@@ -854,201 +891,208 @@ class CardContentProvider : ContentProvider() {
         if (!hasReadWritePermission() && shouldEnforceQueryOrInsertSecurity()) {
             throwSecurityException("insert", uri)
         }
-        val col = CollectionManager.getColUnsafe()
+        val col = getColUnsafe()
         Timber.d(getLogMessage("insert", uri))
 
         // Find out what data the user is requesting
-        return when (sUriMatcher.match(uri)) {
-            NOTES -> {
+        val insertedUri =
+            when (sUriMatcher.match(uri)) {
+                NOTES -> {
                 /* Insert new note with specified fields and tags
                  */
-                val noteTypeId = values!!.getAsLong(FlashCardsContract.Note.MID)
-                val flds = values.getAsString(FlashCardsContract.Note.FLDS)
-                val tags = values.getAsString(FlashCardsContract.Note.TAGS)
+                    val noteTypeId = values!!.getAsLong(FlashCardsContract.Note.MID)
+                    val flds = values.getAsString(FlashCardsContract.Note.FLDS)
+                    val tags = values.getAsString(FlashCardsContract.Note.TAGS)
 //                val allowEmpty = AllowEmpty.fromBoolean(values.getAsBoolean(FlashCardsContract.Note.ALLOW_EMPTY))
-                // Create empty note
-                val newNote = Note.fromNotetypeId(col, noteTypeId)
-                // Set fields
-                val fldsArray = Utils.splitFields(flds)
-                // Check that correct number of flds specified
-                if (fldsArray.size != newNote.fields.size) {
-                    throw IllegalArgumentException("Incorrect flds argument : $flds")
-                }
-                var idx = 0
-                while (idx < fldsArray.size) {
-                    newNote.setField(idx, fldsArray[idx])
-                    idx++
-                }
-                // Set tags
-                if (tags != null) {
-                    newNote.setTagsFromStr(col, tags)
-                }
-                // Add to collection
-                col.addNote(newNote, newNote.notetype.did)
-
-                Uri.withAppendedPath(FlashCardsContract.Note.CONTENT_URI, newNote.id.toString())
-            }
-            NOTES_ID -> throw IllegalArgumentException("Not possible to insert note with specific ID")
-            NOTES_ID_CARDS, NOTES_ID_CARDS_ORD -> throw IllegalArgumentException(
-                "Not possible to insert cards directly (only through NOTES)",
-            )
-            NOTE_TYPES -> {
-                // Get input arguments
-                val noteTypeName = values!!.getAsString(FlashCardsContract.Model.NAME)
-                val css = values.getAsString(FlashCardsContract.Model.CSS)
-                val did = values.getAsLong(FlashCardsContract.Model.DECK_ID)
-                val fieldNames = values.getAsString(FlashCardsContract.Model.FIELD_NAMES)
-                val numCards = values.getAsInteger(FlashCardsContract.Model.NUM_CARDS)
-                val sortf = values.getAsInteger(FlashCardsContract.Model.SORT_FIELD_INDEX)
-                val type = values.getAsInteger(FlashCardsContract.Model.TYPE)?.let(NoteTypeKind::fromCode)
-                val latexPost = values.getAsString(FlashCardsContract.Model.LATEX_POST)
-                val latexPre = values.getAsString(FlashCardsContract.Model.LATEX_PRE)
-                // Throw exception if required fields empty
-                if (noteTypeName == null || fieldNames == null || numCards == null) {
-                    throw IllegalArgumentException("Note type name, field_names, and num_cards can't be empty")
-                }
-                if (did != null && col.decks.isFiltered(did)) {
-                    throw IllegalArgumentException("Cannot set a filtered deck as default deck for a note type")
-                }
-                // Create a new note type
-                val newNoteType = col.notetypes.new(noteTypeName)
-                return try {
-                    // Add the fields
-                    val allFields = Utils.splitFields(fieldNames)
-                    for (f: String? in allFields) {
-                        col.notetypes.addFieldLegacy(newNoteType, col.notetypes.newField(f!!))
+                    // Create empty note
+                    val newNote = Note.fromNotetypeId(col, noteTypeId)
+                    // Set fields
+                    val fldsArray = Utils.splitFields(flds)
+                    // Check that correct number of flds specified
+                    if (fldsArray.size != newNote.fields.size) {
+                        throw IllegalArgumentException("Incorrect flds argument : $flds")
                     }
-                    // Add some empty card templates
                     var idx = 0
-                    while (idx < numCards) {
-                        val cardName = CollectionManager.TR.cardTemplatesCard(idx + 1)
-                        val t = Notetypes.newTemplate(cardName)
-                        t.qfmt = "{{${allFields[0]}}}"
-                        var answerField: String? = allFields[0]
-                        if (allFields.size > 1) {
-                            answerField = allFields[1]
-                        }
-                        t.afmt = "{{FrontSide}}\\n\\n<hr id=answer>\\n\\n{{$answerField}}"
-                        col.notetypes.addTemplate(newNoteType, t)
+                    while (idx < fldsArray.size) {
+                        newNote.setField(idx, fldsArray[idx])
                         idx++
                     }
-                    // Add the CSS if specified
-                    if (css != null) {
-                        newNoteType.css = css
+                    // Set tags
+                    if (tags != null) {
+                        newNote.setTagsFromStr(col, tags)
                     }
-                    // Add the did if specified
-                    if (did != null) {
-                        newNoteType.did = did
-                    }
-                    if (sortf != null && sortf < allFields.size) {
-                        newNoteType.sortf = sortf
-                    }
-                    if (type != null) {
-                        newNoteType.type = type
-                    }
-                    if (latexPost != null) {
-                        newNoteType.latexPost = latexPost
-                    }
-                    if (latexPre != null) {
-                        newNoteType.latexPre = latexPre
-                    }
-                    // Add the note type to collection (from this point on edits will require a full-sync)
-                    col.notetypes.add(newNoteType)
+                    // Add to collection
+                    col.addNote(newNote, newNote.notetype.did)
 
-                    // Get the mid and return a URI
-                    val noteTypeId = newNoteType.id.toString()
-                    Uri.withAppendedPath(FlashCardsContract.Model.CONTENT_URI, noteTypeId)
-                } catch (e: JSONException) {
-                    Timber.e(e, "Could not set a field of new note type %s", noteTypeName)
-                    null
+                    Uri.withAppendedPath(FlashCardsContract.Note.CONTENT_URI, newNote.id.toString())
                 }
-            }
-            NOTE_TYPES_ID -> throw IllegalArgumentException("Not possible to insert note type with specific ID")
-            NOTE_TYPES_ID_TEMPLATES -> {
-                run {
-                    val noteTypeId: NoteTypeId = getNoteTypeIdFromUri(uri, col)
-                    val existingNoteType: NotetypeJson =
-                        col.notetypes.get(noteTypeId)
-                            ?: throw IllegalArgumentException("note type missing: $noteTypeId")
-                    val name: String = values!!.getAsString(FlashCardsContract.CardTemplate.NAME)
-                    val qfmt: String = values.getAsString(FlashCardsContract.CardTemplate.QUESTION_FORMAT)
-                    val afmt: String = values.getAsString(FlashCardsContract.CardTemplate.ANSWER_FORMAT)
-                    val bqfmt: String = values.getAsString(FlashCardsContract.CardTemplate.BROWSER_QUESTION_FORMAT)
-                    val bafmt: String = values.getAsString(FlashCardsContract.CardTemplate.BROWSER_ANSWER_FORMAT)
+                NOTES_ID -> throw IllegalArgumentException("Not possible to insert note with specific ID")
+                NOTES_ID_CARDS, NOTES_ID_CARDS_ORD -> throw IllegalArgumentException(
+                    "Not possible to insert cards directly (only through NOTES)",
+                )
+                NOTE_TYPES -> {
+                    // Get input arguments
+                    val noteTypeName = values!!.getAsString(FlashCardsContract.Model.NAME)
+                    val css = values.getAsString(FlashCardsContract.Model.CSS)
+                    val did = values.getAsLong(FlashCardsContract.Model.DECK_ID)
+                    val fieldNames = values.getAsString(FlashCardsContract.Model.FIELD_NAMES)
+                    val numCards = values.getAsInteger(FlashCardsContract.Model.NUM_CARDS)
+                    val sortf = values.getAsInteger(FlashCardsContract.Model.SORT_FIELD_INDEX)
+                    val type = values.getAsInteger(FlashCardsContract.Model.TYPE)?.let(NoteTypeKind::fromCode)
+                    val latexPost = values.getAsString(FlashCardsContract.Model.LATEX_POST)
+                    val latexPre = values.getAsString(FlashCardsContract.Model.LATEX_PRE)
+                    // Throw exception if required fields empty
+                    if (noteTypeName == null || fieldNames == null || numCards == null) {
+                        throw IllegalArgumentException("Note type name, field_names, and num_cards can't be empty")
+                    }
+                    if (did != null && col.decks.isFiltered(did)) {
+                        throw IllegalArgumentException("Cannot set a filtered deck as default deck for a note type")
+                    }
+                    // Create a new note type
+                    val newNoteType = col.notetypes.new(noteTypeName)
                     try {
-                        var t: CardTemplate =
-                            Notetypes.newTemplate(name).also { tmpl ->
-                                tmpl.qfmt = qfmt
-                                tmpl.afmt = afmt
-                                tmpl.bqfmt = bqfmt
-                                tmpl.bafmt = bafmt
+                        // Add the fields
+                        val allFields = Utils.splitFields(fieldNames)
+                        for (f: String? in allFields) {
+                            col.notetypes.addFieldLegacy(newNoteType, col.notetypes.newField(f!!))
+                        }
+                        // Add some empty card templates
+                        var idx = 0
+                        while (idx < numCards) {
+                            val cardName = CollectionManager.TR.cardTemplatesCard(idx + 1)
+                            val t = Notetypes.newTemplate(cardName)
+                            t.qfmt = "{{${allFields[0]}}}"
+                            var answerField: String? = allFields[0]
+                            if (allFields.size > 1) {
+                                answerField = allFields[1]
                             }
-                        col.notetypes.addTemplate(existingNoteType, t)
-                        col.notetypes.update(existingNoteType)
-                        t = existingNoteType.templates.last()
-                        return ContentUris.withAppendedId(uri, t.ord.toLong())
-                    } catch (e: ConfirmModSchemaException) {
-                        throw IllegalArgumentException("Unable to add template without user requesting/accepting full-sync", e)
-                    } catch (e: JSONException) {
-                        throw IllegalArgumentException("Unable to get ord from new template", e)
-                    }
-                }
-            }
-            NOTE_TYPES_ID_TEMPLATES_ID -> throw IllegalArgumentException("Not possible to insert template with specific ORD")
-            NOTE_TYPES_ID_FIELDS -> {
-                run {
-                    val noteTypeId: NoteTypeId = getNoteTypeIdFromUri(uri, col)
-                    val existingNoteType: NotetypeJson =
-                        col.notetypes.get(noteTypeId)
-                            ?: throw IllegalArgumentException("note type missing: $noteTypeId")
-                    val name: String =
-                        values!!.getAsString(FlashCardsContract.Model.FIELD_NAME)
-                            ?: throw IllegalArgumentException("field name missing for note type: $noteTypeId")
-                    val field = col.notetypes.newField(name)
-                    try {
-                        col.notetypes.addFieldLegacy(existingNoteType, field)
+                            t.afmt = "{{FrontSide}}\\n\\n<hr id=answer>\\n\\n{{$answerField}}"
+                            col.notetypes.addTemplate(newNoteType, t)
+                            idx++
+                        }
+                        // Add the CSS if specified
+                        if (css != null) {
+                            newNoteType.css = css
+                        }
+                        // Add the did if specified
+                        if (did != null) {
+                            newNoteType.did = did
+                        }
+                        if (sortf != null && sortf < allFields.size) {
+                            newNoteType.sortf = sortf
+                        }
+                        if (type != null) {
+                            newNoteType.type = type
+                        }
+                        if (latexPost != null) {
+                            newNoteType.latexPost = latexPost
+                        }
+                        if (latexPre != null) {
+                            newNoteType.latexPre = latexPre
+                        }
+                        // Add the note type to collection (from this point on edits will require a full-sync)
+                        col.notetypes.add(newNoteType)
 
-                        val flds = existingNoteType.fields
-                        return ContentUris.withAppendedId(uri, (flds.length() - 1).toLong())
-                    } catch (e: ConfirmModSchemaException) {
-                        throw IllegalArgumentException("Unable to insert field: $name", e)
+                        // Get the mid and return a URI
+                        val noteTypeId = newNoteType.id.toString()
+                        Uri.withAppendedPath(FlashCardsContract.Model.CONTENT_URI, noteTypeId)
                     } catch (e: JSONException) {
-                        throw IllegalArgumentException("Unable to get newly created field: $name", e)
+                        Timber.e(e, "Could not set a field of new note type %s", noteTypeName)
+                        null
                     }
                 }
+                NOTE_TYPES_ID -> throw IllegalArgumentException("Not possible to insert note type with specific ID")
+                NOTE_TYPES_ID_TEMPLATES -> {
+                    run {
+                        val noteTypeId: NoteTypeId = getNoteTypeIdFromUri(uri, col)
+                        val existingNoteType: NotetypeJson =
+                            col.notetypes.get(noteTypeId)
+                                ?: throw IllegalArgumentException("note type missing: $noteTypeId")
+                        val name: String = values!!.getAsString(FlashCardsContract.CardTemplate.NAME)
+                        val qfmt: String = values.getAsString(FlashCardsContract.CardTemplate.QUESTION_FORMAT)
+                        val afmt: String = values.getAsString(FlashCardsContract.CardTemplate.ANSWER_FORMAT)
+                        val bqfmt: String = values.getAsString(FlashCardsContract.CardTemplate.BROWSER_QUESTION_FORMAT)
+                        val bafmt: String = values.getAsString(FlashCardsContract.CardTemplate.BROWSER_ANSWER_FORMAT)
+                        try {
+                            var t: CardTemplate =
+                                Notetypes.newTemplate(name).also { tmpl ->
+                                    tmpl.qfmt = qfmt
+                                    tmpl.afmt = afmt
+                                    tmpl.bqfmt = bqfmt
+                                    tmpl.bafmt = bafmt
+                                }
+                            col.notetypes.addTemplate(existingNoteType, t)
+                            col.notetypes.update(existingNoteType)
+                            t = existingNoteType.templates.last()
+                            ContentUris.withAppendedId(uri, t.ord.toLong())
+                        } catch (e: ConfirmModSchemaException) {
+                            throw IllegalArgumentException("Unable to add template without user requesting/accepting full-sync", e)
+                        } catch (e: JSONException) {
+                            throw IllegalArgumentException("Unable to get ord from new template", e)
+                        }
+                    }
+                }
+                NOTE_TYPES_ID_TEMPLATES_ID -> throw IllegalArgumentException("Not possible to insert template with specific ORD")
+                NOTE_TYPES_ID_FIELDS -> {
+                    run {
+                        val noteTypeId: NoteTypeId = getNoteTypeIdFromUri(uri, col)
+                        val existingNoteType: NotetypeJson =
+                            col.notetypes.get(noteTypeId)
+                                ?: throw IllegalArgumentException("note type missing: $noteTypeId")
+                        val name: String =
+                            values!!.getAsString(FlashCardsContract.Model.FIELD_NAME)
+                                ?: throw IllegalArgumentException("field name missing for note type: $noteTypeId")
+                        val field = col.notetypes.newField(name)
+                        try {
+                            col.notetypes.addFieldLegacy(existingNoteType, field)
+
+                            val flds = existingNoteType.fields
+                            ContentUris.withAppendedId(uri, (flds.length() - 1).toLong())
+                        } catch (e: ConfirmModSchemaException) {
+                            throw IllegalArgumentException("Unable to insert field: $name", e)
+                        } catch (e: JSONException) {
+                            throw IllegalArgumentException("Unable to get newly created field: $name", e)
+                        }
+                    }
+                }
+                SCHEDULE -> throw IllegalArgumentException("Not possible to perform insert operation on schedule")
+                DECKS -> {
+                    // Insert new deck with specified name
+                    val deckName = values!!.getAsString(FlashCardsContract.Deck.DECK_NAME)
+                    var did = col.decks.idForName(deckName)
+                    if (did != null) {
+                        throw IllegalArgumentException("Deck name already exists: $deckName")
+                    }
+                    if (!Decks.isValidDeckName(deckName)) {
+                        throw IllegalArgumentException("Invalid deck name '$deckName'")
+                    }
+                    try {
+                        did = col.decks.id(deckName)
+                    } catch (filteredSubdeck: BackendDeckIsFilteredException) {
+                        throw IllegalArgumentException(filteredSubdeck.message)
+                    }
+                    val deck: Deck = col.decks.getLegacy(did)!!
+                    val deckDesc = values.getAsString(FlashCardsContract.Deck.DECK_DESC)
+                    if (deckDesc != null) {
+                        deck.description = deckDesc
+                        col.decks.save(deck)
+                    }
+                    Uri.withAppendedPath(FlashCardsContract.Deck.CONTENT_ALL_URI, did.toString())
+                }
+                DECK_SELECTED -> throw IllegalArgumentException("Selected deck can only be queried and updated")
+                DECKS_ID -> throw IllegalArgumentException("Not possible to insert deck with specific ID")
+                MEDIA ->
+                    // insert a media file
+                    // contentvalue should have data and preferredFileName values
+                    insertMediaFile(values, col)
+                else -> throw IllegalArgumentException("uri $uri is not supported")
             }
-            SCHEDULE -> throw IllegalArgumentException("Not possible to perform insert operation on schedule")
-            DECKS -> {
-                // Insert new deck with specified name
-                val deckName = values!!.getAsString(FlashCardsContract.Deck.DECK_NAME)
-                var did = col.decks.idForName(deckName)
-                if (did != null) {
-                    throw IllegalArgumentException("Deck name already exists: $deckName")
-                }
-                if (!Decks.isValidDeckName(deckName)) {
-                    throw IllegalArgumentException("Invalid deck name '$deckName'")
-                }
-                try {
-                    did = col.decks.id(deckName)
-                } catch (filteredSubdeck: BackendDeckIsFilteredException) {
-                    throw IllegalArgumentException(filteredSubdeck.message)
-                }
-                val deck: Deck = col.decks.getLegacy(did)!!
-                val deckDesc = values.getAsString(FlashCardsContract.Deck.DECK_DESC)
-                if (deckDesc != null) {
-                    deck.description = deckDesc
-                    col.decks.save(deck)
-                }
-                Uri.withAppendedPath(FlashCardsContract.Deck.CONTENT_ALL_URI, did.toString())
-            }
-            DECK_SELECTED -> throw IllegalArgumentException("Selected deck can only be queried and updated")
-            DECKS_ID -> throw IllegalArgumentException("Not possible to insert deck with specific ID")
-            MEDIA ->
-                // insert a media file
-                // contentvalue should have data and preferredFileName values
-                insertMediaFile(values, col)
-            else -> throw IllegalArgumentException("uri $uri is not supported")
+
+        if (insertedUri != null) {
+            notifyAllValuesChanged()
         }
+
+        return insertedUri
     }
 
     private fun insertMediaFile(
@@ -1192,6 +1236,7 @@ class CardContentProvider : ContentProvider() {
                 FlashCardsContract.Card.FSRS_DESIRED_RETENTION -> rb.add(currentCard.fsrsDesiredRetention)
                 FlashCardsContract.Card.FSRS_DECAY -> rb.add(currentCard.decay)
                 FlashCardsContract.Card.LAST_REVIEW_TIME_SECONDS -> rb.add(currentCard.lastReviewTimeSecs)
+                FlashCardsContract.Card.FLAGS -> rb.add(currentCard.flags and 7) // return only 3 first bits
                 else -> throw UnsupportedOperationException("Queue \"$column\" is unknown")
             }
         }
@@ -1471,3 +1516,8 @@ private val Card.memoryStateDifficulty: Float?
 
 private val Card.fsrsDesiredRetention: Float?
     get() = desiredRetention
+
+private fun notifyAllValuesChanged() {
+    // TODO: Use more specific OpChanges instead of ALL
+    ChangeManager.publishAllValuesChanged()
+}

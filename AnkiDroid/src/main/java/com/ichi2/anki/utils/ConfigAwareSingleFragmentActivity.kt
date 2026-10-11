@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2025 lukstbit <52494258+lukstbit@users.noreply.github.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 lukstbit <52494258+lukstbit@users.noreply.github.com>
 
 package com.ichi2.anki.utils
 
@@ -40,8 +27,8 @@ class ConfigAwareSingleFragmentActivity : SingleFragmentActivity() {
             intentAction: String? = null,
         ): Intent =
             Intent(context, ConfigAwareSingleFragmentActivity::class.java).apply {
-                putExtra(FRAGMENT_NAME_EXTRA, fragmentClass.jvmName)
-                putExtra(FRAGMENT_ARGS_EXTRA, arguments)
+                putExtra(EXTRA_FRAGMENT_NAME, fragmentClass.jvmName)
+                putExtra(EXTRA_FRAGMENT_ARGS, arguments)
                 action = intentAction
             }
     }

@@ -1,30 +1,19 @@
-/*
- * Copyright (c) 2026 David Allison <davidallisongithub@gmail.com>
- * Copyright (c) 2026 Ashish Yadav <mailtoashish693@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Ashish Yadav <mailtoashish693@gmail.com>
 
 package com.ichi2.anki.multimedia
 
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
+import android.webkit.WebView
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
+import androidx.fragment.app.commitNow
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.multimedia.MultimediaActivity.Companion.EXTRA_MEDIA_OPTIONS
+import com.ichi2.anki.workarounds.SafeWebViewLayout
 import com.ichi2.testutils.launchFragmentInContainer
 import com.ichi2.testutils.withFragment
 import org.hamcrest.MatcherAssert.assertThat
@@ -33,9 +22,13 @@ import org.hamcrest.Matchers.notNullValue
 import org.hamcrest.Matchers.nullValue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import java.io.File
 
-/** A picked or shared `file://` must only resolve to a file inside our own cache. */
+/**
+ * URI resolution for picked/shared images, and [SafeWebViewLayout] lifecycle regression (issue 21952).
+ * [SafeWebViewLayout.onRenderProcessGone] requires API 26+; Robolectric's default SDK (targetSdk) satisfies that.
+ */
 @RunWith(AndroidJUnit4::class)
 class MultimediaImageFragmentTest : RobolectricTest() {
     @Test
@@ -78,6 +71,23 @@ class MultimediaImageFragmentTest : RobolectricTest() {
         val content = "content://media/external/images/media/1".toUri()
         assertThat(PickedImage(Intent().setData(content)).trustedUri, equalTo(content))
     }
+
+    @Test
+    fun `onRenderProcessGone after view is destroyed cleans up the dead WebView - issue 21952`() =
+        withImageFragment {
+            val layout = binding.multimediaWebView
+            val webView = layout.getChildAt(0) as WebView
+            parentFragmentManager.commitNow { detach(this@withImageFragment) }
+            assertThat(view, nullValue())
+
+            layout.onRenderProcessGone(webView)
+
+            assertThat("the dead WebView is destroyed", shadowOf(webView).wasDestroyCalled(), equalTo(true))
+            assertThat("the dead WebView is removed from its parent", webView.parent, nullValue())
+            assertThat("no replacement WebView is created", layout.childCount, equalTo(0))
+
+            layout.safeDestroy()
+        }
 
     private fun withImageFragment(block: MultimediaImageFragment.() -> Unit) =
         launchFragmentInContainer<MultimediaImageFragment>(

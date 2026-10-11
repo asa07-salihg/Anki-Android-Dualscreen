@@ -1,19 +1,7 @@
-/*
- * Copyright (c) 2022 lukstbit <lukstbit@users.noreply.github.com>
- * Copyright (c) 2026 Ashish Yadav <mailtoashish693@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2022 lukstbit <lukstbit@users.noreply.github.com>
+// SPDX-FileCopyrightText: Copyright (c) 2026 Ashish Yadav <mailtoashish693@gmail.com>
+
 package com.ichi2.anki.common.crashreporting
 
 import android.app.Activity
@@ -81,13 +69,16 @@ interface CrashReporter {
  * Global crash reporting service. Delegates to the [CrashReporter] implementation
  * set during app initialization.
  *
+ * Until initialization, reports are logged and dropped ([UninitializedCrashReporter]):
+ * crash reporting is called from error-handling paths, so it must never throw.
+ *
  * Usage:
  * ```
  * CrashReportService.sendExceptionReport(exception, "MyClass.myMethod")
  * ```
  */
 object CrashReportService {
-    lateinit var instance: CrashReporter
+    var instance: CrashReporter = UninitializedCrashReporter
         private set
 
     fun setReporter(reporter: CrashReporter) {
@@ -96,6 +87,12 @@ object CrashReportService {
 
     @VisibleForTesting
     fun getReporter(): CrashReporter = instance
+
+    /** Reset [instance] to the initial reporter implementation which only logs exceptions */
+    @VisibleForTesting
+    fun resetForTesting() {
+        instance = UninitializedCrashReporter
+    }
 
     /**
      * Reports a non-fatal issue without a [Throwable].
@@ -155,6 +152,81 @@ object CrashReportService {
         context: Context,
         defaultValue: Boolean,
     ): Boolean = instance.isEnabled(context, defaultValue)
+}
+
+/**
+ * The [CrashReporter] in place before [CrashReportService.setReporter] is called.
+ *
+ * Log-only: [dropReport]; [warnUnexpectedUse]
+ */
+private object UninitializedCrashReporter : CrashReporter {
+    override fun sendExceptionReport(
+        message: String?,
+        origin: String?,
+    ) {
+        dropReport(null, message, origin)
+    }
+
+    override fun sendExceptionReport(
+        e: Throwable,
+        origin: String?,
+        additionalInfo: String?,
+        onlyIfSilent: Boolean,
+    ) {
+        dropReport(e, additionalInfo, origin)
+    }
+
+    override fun sendExceptionReport(
+        e: Throwable,
+        origin: String?,
+        additionalInfo: String?,
+        onlyIfSilent: Boolean,
+        context: Context,
+    ) {
+        dropReport(e, additionalInfo, origin)
+    }
+
+    override fun onPreferenceChanged(
+        ctx: Context,
+        newValue: String,
+    ) {
+        warnUnexpectedUse("onPreferenceChanged")
+    }
+
+    override fun deleteLimiterData(context: Context) {
+        warnUnexpectedUse("deleteLimiterData")
+    }
+
+    override fun setReportingMode(value: String) {
+        warnUnexpectedUse("setReportingMode")
+    }
+
+    override fun isEnabled(
+        context: Context,
+        defaultValue: Boolean,
+    ): Boolean {
+        warnUnexpectedUse("isEnabled")
+        return defaultValue
+    }
+
+    override fun sendReport(activity: Activity): Boolean {
+        warnUnexpectedUse("sendReport")
+        return false
+    }
+
+    private fun dropReport(
+        e: Throwable?,
+        message: String?,
+        origin: String?,
+    ) {
+        Timber.e("CrashReportService not initialized: dropping report of %s (%s)", e?.javaClass?.name, origin)
+        // ensure PII does not go to ACRA
+        Timber.d(e, "dropped report (%s: %s)", origin, message)
+    }
+
+    private fun warnUnexpectedUse(method: String) {
+        Timber.w("CrashReportService not initialized: %s ignored", method)
+    }
 }
 
 /**

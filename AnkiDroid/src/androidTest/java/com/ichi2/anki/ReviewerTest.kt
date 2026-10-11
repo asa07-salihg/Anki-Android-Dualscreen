@@ -1,18 +1,6 @@
-/*
- *  Copyright (c) 2023
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2023
+
 package com.ichi2.anki
 
 import androidx.core.content.edit
@@ -29,26 +17,27 @@ import androidx.test.espresso.matcher.ViewMatchers.withResourceName
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.ichi2.anki.preferences.sharedPrefs
+import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.libanki.Consts
+import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.tests.InstrumentedTest
 import com.ichi2.anki.tests.checkWithTimeout
-import com.ichi2.anki.tests.libanki.RetryRule
 import com.ichi2.anki.testutil.GrantStoragePermission.storagePermission
-import com.ichi2.anki.testutil.ThreadUtils
 import com.ichi2.anki.testutil.closeBackupCollectionDialogIfExists
 import com.ichi2.anki.testutil.closeGetStartedScreenIfExists
 import com.ichi2.anki.testutil.grantPermissions
 import com.ichi2.anki.testutil.notificationPermission
+import com.ichi2.anki.testutil.waitUntil
 import com.ichi2.anki.utils.ext.cardStateCustomizer
-import com.ichi2.testutils.common.Flaky
-import com.ichi2.testutils.common.OS
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import timber.log.Timber
 import java.lang.AssertionError
+import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class ReviewerTest : InstrumentedTest() {
@@ -65,8 +54,8 @@ class ReviewerTest : InstrumentedTest() {
     @get:Rule
     val runtimePermissionRule = grantPermissions(storagePermission, notificationPermission)
 
-    @get:Rule
-    val retry = RetryRule(10)
+    /** The collection is shared between tests: review a deck which only contains this test's cards */
+    private var testDeckId: DeckId = 0
 
     override fun runBeforeEachTest() {
         super.runBeforeEachTest()
@@ -79,9 +68,22 @@ class ReviewerTest : InstrumentedTest() {
         disableNewReviewer()
     }
 
+    @After
+    fun tearDown() {
+        if (testDeckId != 0L) {
+            col.decks.remove(listOf(testDeckId))
+            col.decks.select(Consts.DEFAULT_DECK_ID)
+            testDeckId = 0
+        }
+        col.cardStateCustomizer = ""
+    }
+
     @Test
-    @Flaky(os = OS.ALL, "Fails on CI with timing issues frequently")
     fun testCustomSchedulerWithCustomData() {
+        val testDeckName = "ReviewerTest-${UUID.randomUUID()}"
+        testDeckId = col.decks.addNormalDeckWithName(testDeckName).id
+        col.decks.select(testDeckId)
+
         col.cardStateCustomizer =
             """
             states.good.normal.review.easeFactor = 3.0;
@@ -89,8 +91,7 @@ class ReviewerTest : InstrumentedTest() {
             customData.good.c += 1;
             """
         val note = addNoteUsingBasicNoteType("foo", "bar")
-        val card = note.firstCard(col)
-        val deck = col.decks.getLegacy(note.notetype.did)!!
+        val card = note.firstCard(col).update { did = testDeckId }
         card.moveToReviewQueue()
         col.backend.updateCards(
             listOf(
@@ -105,7 +106,7 @@ class ReviewerTest : InstrumentedTest() {
 
         closeGetStartedScreenIfExists()
         closeBackupCollectionDialogIfExists()
-        reviewDeckWithName(deck.name)
+        reviewDeckWithName(testDeckName)
 
         var cardFromDb = col.getCard(card.id).toBackendCard()
         assertThat(cardFromDb.easeFactor, equalTo(card.factor))
@@ -113,34 +114,30 @@ class ReviewerTest : InstrumentedTest() {
         assertThat(cardFromDb.customData, equalTo("""{"c":1}"""))
 
         clickShowAnswerAndAnswerGood()
-
-        fun runAssertion() {
-            cardFromDb = col.getCard(card.id).toBackendCard()
-            assertThat(cardFromDb.easeFactor, equalTo(3000))
-            assertThat(cardFromDb.interval, equalTo(123))
-            assertThat(cardFromDb.customData, equalTo("""{"c":2}"""))
+        // Answering runs on the IO dispatcher, which Espresso does not wait for.
+        waitUntil(message = { "The review of card ${card.id} was not saved" }) {
+            col.getCard(card.id).reps == card.reps + 1
         }
 
-        try {
-            runAssertion()
-        } catch (e: Exception) {
-            // Give separate threads a greater chance of doing the custom scheduling
-            // if the card scheduling values aren't updated immediately
-            ThreadUtils.sleep(2000)
-            runAssertion()
-        }
+        cardFromDb = col.getCard(card.id).toBackendCard()
+        assertThat(cardFromDb.easeFactor, equalTo(3000))
+        assertThat(cardFromDb.interval, equalTo(123))
+        assertThat(cardFromDb.customData, equalTo("""{"c":2}"""))
     }
 
     @Test
-    @Flaky(os = OS.ALL, "Fails on CI with timing issues frequently")
     fun testCustomSchedulerWithRuntimeError() {
+        val testDeckName = "ReviewerTest-${UUID.randomUUID()}"
+        testDeckId = col.decks.addNormalDeckWithName(testDeckName).id
+        col.decks.select(testDeckId)
+
         // Issue 15035 - runtime errors weren't handled
         col.cardStateCustomizer = "states.this_is_not_defined.normal.review = 12;"
-        addNoteUsingBasicNoteType()
+        addNoteUsingBasicNoteType().firstCard(col).update { did = testDeckId }
 
         closeGetStartedScreenIfExists()
         closeBackupCollectionDialogIfExists()
-        reviewDeckWithName("Default")
+        reviewDeckWithName(testDeckName)
 
         clickShowAnswer()
 

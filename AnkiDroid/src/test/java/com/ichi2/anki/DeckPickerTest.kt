@@ -1,4 +1,5 @@
-// noinspection MissingCopyrightHeader #8659
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki
 
 import android.Manifest.permission.INTERNET
@@ -7,47 +8,76 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabaseCorruptException
+import android.os.Bundle
+import android.view.KeyEvent
 import android.view.Menu
 import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.core.content.IntentCompat
+import androidx.appcompat.widget.Toolbar
 import androidx.core.content.edit
 import androidx.core.content.pm.ShortcutManagerCompat
+import androidx.core.graphics.Insets
+import androidx.core.net.toUri
+import androidx.core.view.ContentInfoCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.children
 import androidx.test.core.app.ActivityScenario
+import androidx.test.filters.SdkSuppress
+import anki.backend.backendError
 import anki.collection.opChanges
 import anki.scheduler.CardAnswer.Rating
 import app.cash.turbine.test
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.ichi2.anki.CollectionManager.TR
+import com.ichi2.anki.browser.CardBrowserFragment
+import com.ichi2.anki.browser.CardBrowserViewModel.RowSelection
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.common.utils.android.getResFromAttr
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
+import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
+import com.ichi2.anki.databinding.ActivityHomescreenBinding
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
 import com.ichi2.anki.dialogs.DatabaseErrorDialog
 import com.ichi2.anki.dialogs.DatabaseErrorDialog.DatabaseErrorDialogType
 import com.ichi2.anki.dialogs.DeckPickerContextMenu.DeckPickerContextMenuOption
 import com.ichi2.anki.dialogs.DeckPickerContextMenuResult
+import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResult
+import com.ichi2.anki.dialogs.utils.input
+import com.ichi2.anki.dialogs.utils.performPositiveClick
 import com.ichi2.anki.dialogs.utils.title
 import com.ichi2.anki.libanki.DeckId
+import com.ichi2.anki.model.SelectableDeck
+import com.ichi2.anki.navigation.AnkiDroidNavigator
 import com.ichi2.anki.observability.ChangeManager
-import com.ichi2.anki.preferences.sharedPrefs
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.ui.RecyclerFastScroller
+import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.ui.windows.permissions.PermissionsActivity
-import com.ichi2.anki.ui.windows.permissions.PermissionsActivity.Companion.PERMISSIONS_SET_EXTRA
+import com.ichi2.anki.ui.windows.permissions.PermissionsActivity.Companion.EXTRA_PERMISSIONS_SET
 import com.ichi2.anki.utils.Destination
 import com.ichi2.anki.utils.ext.defaultConfig
 import com.ichi2.anki.utils.ext.dismissAllDialogFragments
+import com.ichi2.anki.widgets.DeckAdapter
 import com.ichi2.testutils.BackendEmulatingOpenConflict
 import com.ichi2.testutils.BackupManagerTestUtilities
 import com.ichi2.testutils.common.Flaky
 import com.ichi2.testutils.common.OS
 import com.ichi2.testutils.ext.addBasicNoteWithOp
 import com.ichi2.testutils.ext.menu
+import com.ichi2.testutils.ext.text
 import com.ichi2.testutils.grantWritePermissions
 import com.ichi2.testutils.revokeWritePermissions
+import com.ichi2.testutils.withBooleanPreference
 import com.ichi2.testutils.withDeniedPermissions
 import com.ichi2.testutils.withWritePermissions
+import com.ichi2.ui.AccessibleSearchView
+import kotlinx.coroutines.flow.merge
+import net.ankiweb.rsdroid.BackendException.BackendDbException.BackendDbCorruptException
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.containsString
@@ -241,11 +271,27 @@ class DeckPickerTest : RobolectricTest() {
     @Test
     fun databaseLockedTest() {
         // don't call .onCreate
-        val deckPicker = Robolectric.buildActivity(DeckPickerEx::class.java, Intent()).get()
+        val controller = Robolectric.buildActivity(DeckPickerEx::class.java, Intent())
+        saveControllerForCleanup(controller)
+        val deckPicker = controller.get()
         deckPicker.handleStartupFailure(InitialActivity.StartupFailure.DatabaseLocked)
         assertThat(
             deckPicker.databaseErrorDialog,
             equalTo(DatabaseErrorDialogType.DIALOG_DB_LOCKED),
+        )
+    }
+
+    /** Until the storage setup flow exists (#19552), the user gets recovery options, not a crash */
+    @Test
+    fun `storage undecided shows load-failure options rather than crashing`() {
+        // don't call .onCreate
+        val controller = Robolectric.buildActivity(DeckPickerEx::class.java, Intent())
+        saveControllerForCleanup(controller)
+        val deckPicker = controller.get()
+        deckPicker.handleStartupFailure(InitialActivity.StartupFailure.StorageUndecided)
+        assertThat(
+            deckPicker.databaseErrorDialog,
+            equalTo(DatabaseErrorDialogType.DIALOG_LOAD_FAILED),
         )
     }
 
@@ -419,6 +465,30 @@ class DeckPickerTest : RobolectricTest() {
         assertEquals(expectedTitle, actualTitle)
     }
 
+    private fun withBottomNavigationEnabled(action: () -> Unit) = withBooleanPreference(R.string.dev_bottom_nav_key, true, action)
+
+    private fun DeckPicker.openEmbeddedCardBrowser(): CardBrowserFragment {
+        findViewById<BottomNavigationView>(R.id.bottom_navigation).selectedItemId =
+            BottomNavController.NavigationItem.BROWSER.id
+        supportFragmentManager.executePendingTransactions()
+        return supportFragmentManager.findFragmentByTag("browser") as CardBrowserFragment
+    }
+
+    private fun DeckPicker.longPressDeck(name: String): View {
+        val decks = deckPickerBinding.decks
+        val adapter = decks.adapter as DeckAdapter
+        val deck = adapter.currentList.single { it.lastDeckNameComponent == name }
+        val position = adapter.currentList.indexOf(deck)
+        decks.findViewHolderForAdapterPosition(position)!!.itemView.performLongClick()
+        advanceRobolectricLooperUntil { adapter.currentList[position].isSelected }
+        return decks.findViewHolderForAdapterPosition(position)!!.itemView
+    }
+
+    private fun keyDownEvent(
+        keyCode: Int,
+        modifiers: Int,
+    ): KeyEvent = KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0, modifiers)
+
     @Test
     fun `ContextMenu starts expected activities when specific options are selected`() =
         deckPicker {
@@ -426,12 +496,16 @@ class DeckPickerTest : RobolectricTest() {
                 option: ContextMenuOption,
                 deckId: DeckId,
             ): Intent {
-                var result: Destination? = null
-                viewModel.flowOfDestination.test(1.seconds) {
+                var result: Any? = null
+                merge(viewModel.flowOfDestination, viewModel.flowOfNavigate).test(1.seconds) {
                     selectContextMenuOption(option, deckId)
                     result = awaitItem()
                 }
-                return result!!.toIntent(this)
+                return when (val emitted = result!!) {
+                    is Destination -> emitted.toIntent(this)
+                    is com.ichi2.anki.common.destinations.Destination -> AnkiDroidNavigator.toIntent(emitted)
+                    else -> error("Unexpected destination type: $emitted")
+                }
             }
 
             val didA = addDeck("Deck 1")
@@ -457,7 +531,7 @@ class DeckPickerTest : RobolectricTest() {
 
             Prefs.newReviewRemindersEnabled = true
             val scheduleReminders = selectContextMenuOptionForActivity(DeckPickerContextMenuOption.SCHEDULE_REMINDERS, didA)
-            assertEquals("com.ichi2.anki.SingleFragmentActivity", scheduleReminders.component!!.className)
+            assertEquals("com.ichi2.anki.utils.ConfigAwareSingleFragmentActivity", scheduleReminders.component!!.className)
             onBackPressedDispatcher.onBackPressed()
         }
 
@@ -544,6 +618,133 @@ class DeckPickerTest : RobolectricTest() {
             studyOptionsFragment,
             notNullValue(),
         )
+        assertThat(
+            "DeckPicker should use the fragmented layout on tablet",
+            deckPickerEx.fragmented,
+            equalTo(true),
+        )
+    }
+
+    @Test
+    fun `deck search stays open while filtering`() {
+        addBasicNote()
+        repeat(10) { addDeck("Test Deck $it") }
+
+        deckPicker {
+            advanceRobolectricLooper()
+            val searchItem = menu().findItem(R.id.deck_picker_action_filter)
+            assertTrue(searchItem.isVisible)
+            assertTrue(searchItem.expandActionView())
+            val searchView = searchItem.actionView as AccessibleSearchView
+
+            for ((query, expectedCount) in listOf("s" to 10, "Test Deck 1" to 1, "missing" to 0, "" to 11)) {
+                searchView.setQuery(query, false)
+                advanceRobolectricLooper()
+
+                val currentSearchItem = menu().findItem(R.id.deck_picker_action_filter)
+                assertTrue(currentSearchItem.isActionViewExpanded, "Search should stay open for '$query'")
+                assertEquals(query, (currentSearchItem.actionView as AccessibleSearchView).query.toString())
+                advanceRobolectricLooperUntil { visibleDeckCount == expectedCount }
+            }
+        }
+    }
+
+    @Test
+    fun `study options follows the selected deck`() {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        val deckId = addDeck("Another Deck")
+
+        deckPicker {
+            viewModel.selectDeck(deckId).join()
+            advanceRobolectricLooper()
+
+            assertEquals(deckId, assertNotNull(fragment).viewModel.selectedDeckId)
+            assertEquals("Another Deck", findViewById<TextView>(R.id.studyoptions_deck_name).text.toString())
+        }
+    }
+
+    @Test
+    fun `study options updates after reloading deck counts`() {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        addBasicNote()
+
+        deckPicker {
+            val initialState = assertNotNull(fragment).viewModel.state
+            assertEquals(1, initialState.dataOrNull()?.numberOfCardsInDeck)
+
+            addBasicNote()
+            viewModel.reloadDeckCounts().join()
+            advanceRobolectricLooper()
+
+            val updatedState = assertNotNull(fragment).viewModel.state
+            assertEquals(2, updatedState.dataOrNull()?.numberOfCardsInDeck)
+        }
+    }
+
+    @Test
+    fun `study options menu items are only displayed in fragmented mode`() {
+        deckPickerEx {
+            val isTablet = fragmented
+            val menu = menu()
+            if (isTablet) {
+                // Ossifies the split-pane menu decision: the side panel fragment contributes
+                // its items to this activity's toolbar via its MenuProvider.
+                assertThat(
+                    "custom study should be displayed in fragmented mode",
+                    menu.findItem(R.id.action_custom_study),
+                    notNullValue(),
+                )
+                assertThat(
+                    "deck options should be displayed in fragmented mode",
+                    menu.findItem(R.id.action_deck_or_study_options),
+                    notNullValue(),
+                )
+            } else {
+                // No side panel fragment exists: its items must not appear.
+                assertThat(
+                    "custom study must not be displayed outside fragmented mode",
+                    menu.findItem(R.id.action_custom_study),
+                    nullValue(),
+                )
+                assertThat(
+                    "deck options must not be displayed outside fragmented mode",
+                    menu.findItem(R.id.action_deck_or_study_options),
+                    nullValue(),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `restored study options fragment is pruned when recreated into single pane`() {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        ActivityScenario.launch(DeckPicker::class.java).use { scenario ->
+            advanceRobolectricLooper()
+            scenario.onActivity { deckPicker ->
+                assertThat(
+                    "side panel fragment should be displayed on tablet",
+                    deckPicker.supportFragmentManager.findFragmentById(R.id.studyoptions_fragment),
+                    notNullValue(),
+                )
+            }
+            // Fold the device: the activity recreates into the single-pane layout, while
+            // FragmentManager restores the saved side panel fragment into it.
+            RuntimeEnvironment.setQualifiers("sw320dp")
+            scenario.recreate()
+            advanceRobolectricLooper()
+            scenario.onActivity { deckPicker ->
+                assertThat(
+                    "restored side panel fragment must be pruned in single-pane layout",
+                    deckPicker.supportFragmentManager.findFragmentById(R.id.studyoptions_fragment),
+                    nullValue(),
+                )
+                assertThat(
+                    "study options menu items must not leak into the single-pane toolbar",
+                    deckPicker.menu().findItem(R.id.action_custom_study),
+                    nullValue(),
+                )
+            }
+        }
     }
 
     @Test
@@ -572,6 +773,23 @@ class DeckPickerTest : RobolectricTest() {
                 "No deck is being displayed",
                 hasAtLeastOneDeckBeingDisplayed(),
                 equalTo(false),
+            )
+        }
+    }
+
+    @Test
+    fun `long pressed deck is highlighted on phones`() {
+        val initiallySelectedDeck = addDeck("Initially selected")
+        addDeck("Long pressed")
+        col.decks.select(initiallySelectedDeck)
+
+        deckPicker {
+            assumeTrue("Not running on tablet", !fragmented)
+            val selectedDeck = longPressDeck("Long pressed")
+
+            assertThat(
+                shadowOf(selectedDeck.background).createdFromResId,
+                equalTo(getResFromAttr(this, R.attr.currentDeckBackground)),
             )
         }
     }
@@ -675,6 +893,238 @@ class DeckPickerTest : RobolectricTest() {
         }
 
     @Test
+    fun `FAB opens menu on accessibility click`() =
+        deckPicker {
+            val fab = findViewById<View>(R.id.fab_main)
+            assertThat("menu starts closed", floatingActionMenu.isFABOpen, equalTo(false))
+            // TalkBack activate a focused control, which routes to [View.performClick]
+            fab.performClick()
+            assertThat("FAB menu opens on click", floatingActionMenu.isFABOpen, equalTo(true))
+        }
+
+    @Test
+    fun `FAB menu opens on ENTER key`() =
+        deckPicker {
+            val fab = findViewById<View>(R.id.fab_main)
+
+            assertThat("menu starts closed", floatingActionMenu.isFABOpen, equalTo(false))
+
+            fab.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+
+            assertThat("ENTER key opens the FAB menu", floatingActionMenu.isFABOpen, equalTo(true))
+        }
+
+    @Test
+    fun `FAB menu closes on ESCAPE key`() =
+        deckPicker {
+            val fab = findViewById<View>(R.id.fab_main)
+            floatingActionMenu.showFloatingActionMenu()
+            assertThat("menu is open", floatingActionMenu.isFABOpen, equalTo(true))
+
+            fab.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE))
+
+            assertThat(
+                "ESCAPE key closes the FAB menu",
+                floatingActionMenu.isFABOpen,
+                equalTo(false),
+            )
+        }
+
+    @Test
+    fun `expanding the FAB menu shows the correct labels`() =
+        deckPicker {
+            floatingActionMenu.showFloatingActionMenu()
+            advanceRobolectricLooper()
+
+            val binding = floatingActionButtonBinding
+            assertThat(binding.fabMain.text.toString(), equalTo(getString(R.string.menu_add)))
+            assertThat(
+                binding.addSharedButton.text.toString(),
+                equalTo(getString(R.string.menu_get_shared_decks)),
+            )
+            assertThat(
+                binding.addFilteredDeckButton.text.toString(),
+                equalTo(getString(R.string.new_dynamic_deck)),
+            )
+            // 'Create deck' uses a backend string rather than an android:text resource
+            assertThat(
+                binding.addDeckButton.text.toString(),
+                equalTo(with(targetContext) { TR.sentenceCase.createDeck }),
+            )
+        }
+
+    @Test
+    fun `expanding the FAB menu re-extends the Create deck button`() =
+        deckPicker {
+            val addDeckButton = floatingActionButtonBinding.addDeckButton
+            addDeckButton.isExtended = false
+
+            floatingActionMenu.showFloatingActionMenu()
+            advanceRobolectricLooper()
+
+            assertTrue(!addDeckButton.text.isNullOrBlank(), "Create deck button must have a label")
+            assertTrue(
+                addDeckButton.isExtended,
+                "Create deck button must be extended so its label is visible",
+            )
+        }
+
+    @Test
+    fun `bottom navigation has correct labels`() =
+        withBottomNavigationEnabled {
+            assumeTrue("Not running on tablet", qualifiers != "xlarge")
+            deckPicker {
+                val menu = ActivityHomescreenBinding.bind(findViewById(R.id.root_layout)).bottomNavigation!!.menu
+                assertThat(menu.findItem(R.id.nav_home)?.title.toString(), equalTo("Decks"))
+                assertThat(menu.findItem(R.id.nav_browser)?.title.toString(), equalTo("Browse"))
+                assertThat(menu.findItem(R.id.nav_stats)?.title.toString(), equalTo("Statistics"))
+                assertThat(menu.findItem(R.id.nav_more)?.title.toString(), equalTo("More"))
+            }
+        }
+
+    @Test
+    fun `Alt number shortcuts navigate between bottom navigation destinations`() =
+        withBottomNavigationEnabled {
+            assumeTrue("Not running on tablet", qualifiers != "xlarge")
+            deckPicker {
+                val bottomNav = ActivityHomescreenBinding.bind(findViewById(R.id.root_layout)).bottomNavigation!!
+                val shortcuts =
+                    listOf(
+                        KeyEvent.KEYCODE_1 to BottomNavController.NavigationItem.HOME,
+                        KeyEvent.KEYCODE_2 to BottomNavController.NavigationItem.BROWSER,
+                        KeyEvent.KEYCODE_3 to BottomNavController.NavigationItem.STATS,
+                        KeyEvent.KEYCODE_4 to BottomNavController.NavigationItem.MORE,
+                    )
+
+                shortcuts.forEach { (keyCode, destination) ->
+                    val handled = dispatchKeyEvent(keyDownEvent(keyCode, KeyEvent.META_ALT_ON))
+
+                    assertThat("Alt shortcut is handled", handled, equalTo(true))
+                    assertThat(bottomNav.selectedItemId, equalTo(destination.id))
+                }
+            }
+        }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 26)
+    fun `bottom navigation exposes a long title as a tooltip`() =
+        withBottomNavigationEnabled {
+            assumeTrue("Not running on tablet", qualifiers != "xlarge")
+            deckPicker {
+                val bottomNav = ActivityHomescreenBinding.bind(findViewById(R.id.root_layout)).bottomNavigation!!
+                val longTitle = "Statistikenübersicht"
+
+                bottomNav.menu.findItem(R.id.nav_stats).title = longTitle
+
+                assertThat(bottomNav.findViewById<View>(R.id.nav_stats).tooltipText.toString(), equalTo(longTitle))
+            }
+        }
+
+    @Test
+    fun `bottom navigation supports the public card browser`() =
+        withBottomNavigationEnabled {
+            withBooleanPreference(R.string.dev_card_browser_search_view, false) {
+                assumeTrue("Not running on tablet", qualifiers != "xlarge")
+                deckPicker {
+                    val browser = openEmbeddedCardBrowser()
+                    val browserView = browser.requireView()
+                    val browserToolbar = browserView.findViewById<Toolbar>(R.id.toolbar)
+                    assertThat(browser.legacySearchView, notNullValue())
+                    assertThat(browserToolbar.menu.findItem(R.id.action_search), notNullValue())
+                }
+            }
+        }
+
+    @Test
+    fun `embedded card browser accounts for system bar insets`() =
+        withBottomNavigationEnabled {
+            withBooleanPreference(R.string.dev_card_browser_search_view, false) {
+                assumeTrue("Not running on tablet", qualifiers != "xlarge")
+                deckPicker {
+                    val browserView = openEmbeddedCardBrowser().requireView()
+
+                    val statusBarHeight = 24
+                    val insets =
+                        WindowInsetsCompat
+                            .Builder()
+                            .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, statusBarHeight, 0, 0))
+                            .setInsets(WindowInsetsCompat.Type.navigationBars(), Insets.of(0, 0, 0, 48))
+                            .build()
+                    ViewCompat.dispatchApplyWindowInsets(browserView, insets)
+
+                    assertThat(browserView.findViewById<View>(R.id.toolbar_container).paddingTop, equalTo(statusBarHeight))
+                    assertThat(browserView.findViewById<RecyclerFastScroller>(R.id.browser_scroller).handleBottomInset, equalTo(0))
+                }
+            }
+        }
+
+    @Test
+    fun `embedded card browser updates selected row count after deselection`() =
+        withBottomNavigationEnabled {
+            withBooleanPreference(R.string.dev_card_browser_search_view, false) {
+                assumeTrue("Not running on tablet", qualifiers != "xlarge")
+                deckPicker {
+                    addBasicNoteWithOp(fields = listOf("first", "one"))
+                    addBasicNoteWithOp(fields = listOf("second", "two"))
+                    val browser = openEmbeddedCardBrowser()
+                    advanceRobolectricLooper()
+                    val viewModel = browser.activityViewModel
+                    val toolbarTitle = browser.requireView().findViewById<TextView>(R.id.toolbar_title)
+                    val firstRow = RowSelection(viewModel.getRowAtPosition(0), topOffset = 0)
+                    val secondRow = RowSelection(viewModel.getRowAtPosition(1), topOffset = 0)
+
+                    viewModel.handleRowLongPress(firstRow).join()
+                    viewModel.onTap(secondRow).join()
+                    advanceRobolectricLooper()
+                    assertThat(toolbarTitle.text.toString(), equalTo("2"))
+
+                    viewModel.onTap(firstRow).join()
+                    advanceRobolectricLooper()
+                    assertThat(toolbarTitle.text.toString(), equalTo("1"))
+                }
+            }
+        }
+
+    @Test
+    fun `embedded card browser can select all decks`() =
+        withBottomNavigationEnabled {
+            withBooleanPreference(R.string.dev_card_browser_search_view, false) {
+                assumeTrue("Not running on tablet", qualifiers != "xlarge")
+                deckPicker {
+                    val browser = openEmbeddedCardBrowser()
+
+                    browser.childFragmentManager.setFragmentResult(
+                        DeckSelectionDialog.REQUEST_SELECT_DECK,
+                        Bundle().apply {
+                            putParcelable(DeckSelectionDialog.ARG_SELECTED_DECK, SelectableDeck.AllDecks)
+                        },
+                    )
+                }
+            }
+        }
+
+    @Test
+    fun `bottom navigation shortcuts are registered in keyboard shortcut help`() =
+        withBottomNavigationEnabled {
+            assumeTrue("Not running on tablet", qualifiers != "xlarge")
+            deckPicker {
+                val bottomNavigationShortcuts = shortcuts.shortcuts.filter { it.shortcut.startsWith("Alt+") }
+
+                assertThat(
+                    bottomNavigationShortcuts.associate { it.shortcut to it.label },
+                    equalTo(
+                        mapOf(
+                            "Alt+1" to "Deck picker",
+                            "Alt+2" to "Card Browser",
+                            "Alt+3" to "Open statistics",
+                            "Alt+4" to "More",
+                        ),
+                    ),
+                )
+            }
+        }
+
+    @Test
     fun `On a new startup, the App Intro is displayed`() =
         deckPicker(skipIntroduction = false) {
             val nextIntent = Shadows.shadowOf(this).nextStartedActivity
@@ -718,17 +1168,12 @@ class DeckPickerTest : RobolectricTest() {
             assertThat(databaseErrorDialog, equalTo(DatabaseErrorDialogType.DIALOG_LOAD_FAILED))
         }
 
-    /**
-     * Emulates a null collection and a `BackendDbLockedException`
-     *
-     * @see enableNullCollection
-     */
-    private fun withNullCollection(block: () -> Unit) =
-        try {
-            enableNullCollection()
-            block()
-        } finally {
-            disableNullCollection()
+    /** The backend may raise corruption directly, without conversion to a SQLite exception */
+    @Test
+    fun `BackendDbCorruptException in runCatching shows database error dialog`() =
+        deckPickerEx {
+            runCatching { throw BackendDbCorruptException(backendError {}) }
+            assertThat(databaseErrorDialog, equalTo(DatabaseErrorDialogType.DIALOG_LOAD_FAILED))
         }
 
     @Test
@@ -743,12 +1188,29 @@ class DeckPickerTest : RobolectricTest() {
                         equalTo(PermissionsActivity::class.java.name),
                     )
 
-                    val extra = IntentCompat.getParcelableExtra(intent, PERMISSIONS_SET_EXTRA, PermissionSet::class.java)
+                    val extra = intent.getParcelableExtraCompat<StoragePermissionSet>(EXTRA_PERMISSIONS_SET)
 
                     assertNotNull(extra)
                     assertThat(extra.permissions, equalTo(listOf(INTERNET)))
                 }
             }
+        }
+
+    @Test
+    fun `creating a deck selects it`() =
+        deckPicker {
+            showCreateDeckDialog()
+            val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+            dialog.input = "My Deck"
+            dialog.performPositiveClick()
+            ShadowLooper.runUiThreadTasksIncludingDelayedTasks()
+
+            val newDeckId = col.decks.byName("My Deck")!!.id
+            assertThat(
+                "the newly created deck should become the current deck",
+                col.decks.current().id,
+                equalTo(newDeckId),
+            )
         }
 
     enum class CollectionType(
@@ -795,6 +1257,26 @@ class DeckPickerTest : RobolectricTest() {
             return super.onPrepareOptionsMenu(menu)
         }
     }
+
+    @Test
+    fun draggingUnsupportedFileShowsSnackbarError() =
+        deckPicker {
+            val clipData = android.content.ClipData.newRawUri("unsupported", "file:///path/to/image.jpg".toUri())
+            val payload =
+                ContentInfoCompat
+                    .Builder(clipData, ContentInfoCompat.SOURCE_DRAG_AND_DROP)
+                    .build()
+            ViewCompat.performReceiveContent(findViewById(R.id.pull_to_sync_wrapper), payload)
+
+            val snackbar = showSnackbar(getString(R.string.import_log_no_apkg))
+            assertThat("snackbar must be shown for unsupported file drop", snackbar, notNullValue())
+
+            val snackbarText = snackbar?.text
+            assertThat(
+                snackbarText,
+                equalTo(getString(R.string.import_log_no_apkg)),
+            )
+        }
 }
 
 fun RobolectricTest.setIntroductionSlidesShown(shown: Boolean) {

@@ -1,9 +1,14 @@
+import com.ichi2.anki.gradle.VersionCodeTasks
+
 plugins {
     // Gradle plugin portal
     alias(libs.plugins.tripletPlay)
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.parcelize)
+    // TODO: migrate to .kts & replace the next 2 id lines with id("ankidroid.android.app")
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.plugin.parcelize'
+    alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.keeper)
     alias(libs.plugins.roborazzi)
     id 'idea'
@@ -20,6 +25,14 @@ keeper {
         // Silence missing definitions
         arguments.set(["--map-diagnostics:MissingDefinitionsDiagnostic", "error", "none"])
     }
+}
+
+baselineProfile {
+    // Write generated profiles to `src/main/baselineProfiles/` instead of the
+    // default per-variant `src/playRelease/generated/baselineProfiles/`. This
+    // ensures the profile is consumed by ALL variants (play, amazon, full) and
+    // ALL buildTypes (release, benchmark), not just `playRelease`.
+    mergeIntoMain = true
 }
 
 idea {
@@ -60,6 +73,7 @@ android {
         aidl = true
         viewBinding = true
         resValues = true
+        compose = true
     }
 
     if (rootProject.testReleaseBuild) {
@@ -101,9 +115,9 @@ android {
         //
         // This ensures the correct ordering between the various types of releases (dev < alpha < beta < release) which is
         // needed for upgrades to be offered correctly.
-        versionCode=22401300
+        versionCode=22501300
         // If you change this to a new version, you probably also want to update .gradle/workflows/milestone.yml for the new version...
-        versionName="2.24.1-dualscreen.1"
+        versionName="2.25.1-dualscreen.1"
         minSdk = libs.versions.minSdk.get().toInteger()
 
         // After #13695: change .tests_emulator.yml
@@ -111,6 +125,30 @@ android {
         testApplicationId = "com.ichi2.anki.tests"
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = 'com.ichi2.testutils.NewCollectionPathTestRunner'
+
+        // GA4 Measurement Protocol api_secret. Sourced from `local.properties`
+        // (ANALYTICS_API_KEY) or the ANALYTICS_API_KEY env var; falls back to
+        // a dummy value so contributor builds still compile.
+        //
+        // The dummy key is rejected by GA's ingest, so analytics requests from
+        // unsigned/local builds go nowhere this means `setDevMode()` (100%
+        // sampling) has no observable effect on a build without the real key.
+        //
+        // Google documents the api_secret as private, and the Measurement Protocol
+        // as intended for trusted/server-side use:
+        // https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events#api_secret
+        // Shipping it in the APK means anyone can extract it and post junk events to
+        // the property, which would corrupt our reporting. We accept that: there is no
+        // server-side path for an offline-first app, the property holds no user data,
+        // and a polluted property can be rotated by issuing a new secret.
+        Properties properties = new Properties()
+        def localPropsFile = project.rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            properties.load(localPropsFile.newDataInputStream())
+        }
+
+        def apiKey = properties.getProperty("ANALYTICS_API_KEY") ?: System.getenv("ANALYTICS_API_KEY") ?: "DUMMY_API_XXX"
+        buildConfigField "String", "ANALYTICS_API_KEY", "\"${apiKey}\""
     }
     signingConfigs {
         release {
@@ -184,6 +222,13 @@ android {
             resValue 'color', 'anki_foreground_icon_color_0', "#FFFFCA28"
             resValue 'color', 'anki_foreground_icon_color_1', "#FFFF8F00"
         }
+
+        create('benchmark') {
+            initWith release
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
+            debuggable false
+        }
     }
 
     /**
@@ -220,12 +265,26 @@ android {
      */
     def enableSeparateBuildPerCPUArchitecture = true
 
+    /**
+     * Restricts the build to a single CPU architecture, e.g. `-PabiFilter=arm64-v8a`.
+     * Allows F-Droid to build one APK per architecture without patching this file (#21399).
+     */
+    def abiFilter = providers.gradleProperty("abiFilter").getOrNull()
+    def supportedAbis = ["armeabi-v7a", "x86", "arm64-v8a", "x86_64"]
+    if (abiFilter != null && !supportedAbis.contains(abiFilter)) {
+        throw new GradleException("Unsupported -PabiFilter value '$abiFilter'. Expected one of: $supportedAbis")
+    }
+
     splits {
         abi {
             reset()
             enable = enableSeparateBuildPerCPUArchitecture
             //universalApk enableUniversalApk  // set in debug + release config blocks above
-            include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
+            if (abiFilter != null) {
+                include abiFilter
+            } else {
+                include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
+            }
         }
     }
     // applicationVariants are e.g. debug, release
@@ -268,6 +327,22 @@ android {
                     // ./gradlew testFullDebugUnitTest -Pscreenshot
                     if (project.hasProperty("screenshot")) {
                         includeTags "com.ichi2.anki.ScreenshotTestCategory"
+
+                        // ./gradlew :AnkiDroid:recordRoborazziPlayDebug -Pscreenshot -Ptheme=black -Pdevice=tablet,foldable
+                        def theme = project.findProperty("theme") ?: "light"
+                        def device = project.findProperty("device") ?: "phone"
+                        def validateInput = { Object input, List<String> validOptions ->
+                            def requested = input.toString().split(',').collect { it.trim().toLowerCase() }
+                            def invalid = requested - validOptions
+                            if (!invalid.isEmpty()) {
+                                throw new GradleException("Invalid param: '${invalid.join(', ')}'. Valid options: ${validOptions.join(', ')}.")
+                            }
+                        }
+                        validateInput(theme, ["light", "plain", "dark", "black", "eink", "all"])
+                        validateInput(device, ["phone", "tablet", "foldable", "desktop", "all"])
+
+                        systemProperty "screenshot.theme", theme
+                        systemProperty "screenshot.device", device
                     } else {
                         excludeTags "com.ichi2.anki.ScreenshotTestCategory"
                     }
@@ -304,9 +379,18 @@ android {
     }
 }
 
+// register `validateVersionCode` with our (potentially new versionCode).
+androidComponents.finalizeDsl { androidDsl ->
+    def validation = VersionCodeTasks.registerValidationTask(project, androidDsl.defaultConfig.versionCode)
+    // handle all 'publish' calls, even if run directly
+    tasks.matching { it.name.startsWith("publish") }.configureEach {
+        dependsOn(validation)
+    }
+}
+
 play {
     serviceAccountCredentials.set(file("${homePath}/src/AnkiDroid-GCP-Publish-Credentials.json"))
-    track.set('beta')
+    track.set('production')
 
     // any time we bump minSdk we want Play Store to retain the old artifacts by version code,
     // so that they remain available for older devices
@@ -334,9 +418,15 @@ play {
 }
 
 // Install Git pre-commit hook for Ktlint
+// Resolve via git so worktrees (where `.git` is a file) are handled correctly.
+def gitHooksDir = providers.exec {
+    workingDir = rootProject.rootDir
+    commandLine "git", "rev-parse", "--git-path", "hooks"
+}.standardOutput.asText.map { rootProject.rootDir.toPath().resolve(it.trim()).toFile() }
+
 tasks.register('installGitHook', Copy) {
     from new File(rootProject.rootDir, 'pre-commit')
-    into { new File(rootProject.rootDir, '.git/hooks') }
+    into gitHooksDir
     filePermissions {
         user {
             read = write = execute = true
@@ -346,30 +436,221 @@ tasks.register('installGitHook', Copy) {
 // to run manually: `./gradlew installGitHook`
 tasks.named('preBuild').configure { dependsOn('installGitHook') }
 
+// Fail fast when an emulator's primary user (user 0) is still locked after boot.
+//
+// Purpose: detect Play / Google-apis AVDs that have an account with a startup PIN or
+// screen lock. Those report sys.boot_completed while user 0 stays RUNNING_LOCKED, so
+// credential-encrypted storage is unavailable, AnkiDroidApp.onCreate crashes reading
+// preferences, and the connected suite reports a confusing zero-test "success" after
+// minutes of work. This check stops that before install.
+//
+// Scope:
+// - Only user 0 (secondary profiles being locked must not fail the build).
+// - Device set and selector precedence exactly match AGP connected tests:
+//   task --serial, connectedCheck --serial, ANDROID_SERIAL, then every online device.
+abstract class AssertDevicesUnlocked extends DefaultTask {
+    @InputFile
+    abstract RegularFileProperty getAdbExecutable()
+
+    /** --serial values supplied directly to connectedPlay<Variant>AndroidTest. */
+    @Input
+    abstract ListProperty<String> getDirectSerials()
+
+    /** --serial values inherited from connectedCheck. */
+    @Input
+    abstract ListProperty<String> getConnectedCheckSerials()
+
+    /** ANDROID_SERIAL, tracked as task input for configuration-cache correctness. */
+    @Input
+    @Optional
+    abstract Property<String> getAndroidSerialEnv()
+
+    @javax.inject.Inject
+    abstract ExecOperations getExecOperations()
+
+    @TaskAction
+    void assertDevicesUnlocked() {
+        def adb = adbExecutable.get().asFile.absolutePath
+        def selection = selectSerials(
+            directSerials.present,
+            directSerials.getOrElse([]),
+            connectedCheckSerials.getOrElse([]),
+            androidSerialEnv.getOrNull(),
+        )
+        def onlineSerials = []
+        for (String line : adbOutput(adb, 'devices').readLines()) {
+            if (!(line ==~ /\S+\tdevice/)) {
+                continue
+            }
+            onlineSerials.add(line.split('\t')[0])
+        }
+
+        if (!onlineSerials) {
+            throw new GradleScriptException("No online devices found.", null)
+        }
+
+        def serialsToCheck = onlineSerials
+        if (selection.serials != null) {
+            // Match AGP's intended multiset behavior for task-option lists: each online device
+            // consumes one requested serial. Repeating the same --serial twice therefore leaves
+            // one unmatched and fails.
+            //
+            // AGP 9.4 implements that by mutating targetSerials in
+            // DeviceProviderInstrumentTestTask.getFilteredDevices(). That list comes from
+            // ListProperty.get() (an ImmutableList), so connectedPlay*AndroidTest --serial
+            // currently crashes with UnsupportedOperationException at ImmutableCollection.remove
+            // before tests run. Reproduced on this repo with and without this preflight; no
+            // public Issue Tracker ID found as of 2026-09-22. ANDROID_SERIAL still works because
+            // that path never calls getFilteredDevices(). This preflight copies into an ArrayList
+            // so we do not inherit the same crash.
+            def unmatched = new ArrayList<String>(selection.serials)
+            for (String onlineSerial : onlineSerials) {
+                unmatched.remove(onlineSerial)
+            }
+            if (unmatched) {
+                throw new GradleScriptException(
+                    selection.source + " lists device(s) not connected (or not in 'device' state): " +
+                        unmatched.join(', ') + ". Connected: " + onlineSerials.join(', ') + ".",
+                    null,
+                )
+            }
+            serialsToCheck = selection.serials.unique()
+        }
+
+        logger.info("Checking user-0 unlock state on ${serialsToCheck} selected by ${selection.source}")
+        def locked = []
+        for (String serial : serialsToCheck) {
+            if (isUser0Locked(adbOutput(adb, '-s', serial, 'shell', 'dumpsys', 'user'))) {
+                locked.add(serial)
+            }
+        }
+        if (locked) {
+            throw new GradleScriptException(
+                "Device(s) " + locked.join(', ') + " have booted but user 0 is still locked, so every " +
+                    "test would fail in Application.onCreate. Unlock the screen (a Play AVD with an " +
+                    "account + startup PIN stays locked until the PIN is entered), or select an unlocked " +
+                    "device with --serial / ANDROID_SERIAL.",
+                null,
+            )
+        }
+    }
+
+    /**
+     * Select serials using AGP DeviceProviderInstrumentTestTask.getTargetSerials() + run().
+     *
+     * Presence of the direct --serial ListProperty wins even when the list is empty: AGP then
+     * skips connectedCheck --serial and consults ANDROID_SERIAL only because the target list is
+     * empty. Groovy-truth on the list contents would wrongly fall through to connectedCheck.
+     * ANDROID_SERIAL is Splitter.on(',').split with no trim (ConnectedDeviceProvider).
+     * A null serial list means AGP will run against every online device.
+     */
+    static Map selectSerials(
+        boolean directSerialsPresent,
+        List<String> directSerials,
+        List<String> connectedCheckSerials,
+        String androidSerialEnv
+    ) {
+        def targetSerials = directSerialsPresent ? directSerials : connectedCheckSerials
+        def source = directSerialsPresent ? 'Task --serial' : 'connectedCheck --serial'
+        if (targetSerials) {
+            return [source: source, serials: targetSerials]
+        }
+        if (androidSerialEnv != null && !androidSerialEnv.isEmpty()) {
+            // AGP uses Sets.newHashSet(Splitter.on(',').split(androidSerialEnv)).
+            def serials = androidSerialEnv.split(',', -1).toList().unique()
+            return [source: 'ANDROID_SERIAL', serials: serials]
+        }
+        return [source: 'connected devices', serials: null]
+    }
+
+    /**
+     * True when dumpsys user reports user 0 as locked.
+     * Handles both modern dumps (`Started users state: [0=RUNNING_UNLOCKED]`) and Android 11
+     * dumps (`Started users state: {0=1, 10=3}`), where UserState.STATE_RUNNING_LOCKED = 1 and
+     * STATE_RUNNING_UNLOCKED = 3 (frameworks/base/.../am/UserState.java). Match the user-0 entry
+     * exactly so a locked secondary profile (e.g. 10=RUNNING_LOCKED / 10=1) cannot false-positive,
+     * including via the "0=RUNNING_LOCKED" substring inside "10=RUNNING_LOCKED".
+     */
+    static boolean isUser0Locked(String dumpsysUser) {
+        def matcher = dumpsysUser =~ /Started users state: [\[{]([^\]}]*)[\]}]/
+        if (!matcher.find()) {
+            return false
+        }
+        for (String entry : matcher.group(1).split(',')) {
+            def parts = entry.trim().split('=', 2)
+            if (parts.length != 2 || parts[0] != '0') {
+                continue
+            }
+            def state = parts[1]
+            // Numeric (API 30 dumps) or named (newer dumps). STATE_RUNNING_LOCKED = 1.
+            return state == 'RUNNING_LOCKED' || state == '1'
+        }
+        return false
+    }
+
+    private String adbOutput(String adb, String... args) {
+        def output = new ByteArrayOutputStream()
+        execOperations.exec {
+            it.commandLine([adb, *args])
+            it.standardOutput = output
+        }
+        return output.toString()
+    }
+}
+tasks.register('assertDevicesUnlocked', AssertDevicesUnlocked) {
+    adbExecutable.set(androidComponents.sdkComponents.adb)
+    // No convention([]) on the --serial lists: AGP getTargetSerials() keys off isPresent(),
+    // and an empty convention would make the direct property look intentionally set.
+    androidSerialEnv.set(providers.environmentVariable('ANDROID_SERIAL'))
+    // Device state is not an input Gradle can track, so never consider this task up to date
+    outputs.upToDateWhen { false }
+}
+
 // Issue 11078 - some emulators run, but run zero tests, and still report success
 tasks.register('assertNonzeroAndroidTests') {
-    // Resolve the directory at configuration time, which is Gradle Configuration Cache compatible
-    def resultsDir = layout.buildDirectory.dir("outputs/androidTest-results/connected/flavors/play")
+    // Resolve the directory at configuration time, which is Gradle Configuration Cache compatible.
+    // The build type segment must track the variant the connected test task runs under, so it is
+    // derived from the same property that names that task.
+    def buildType = rootProject.androidTestVariantName.toLowerCase(Locale.ROOT)
+    def resultsDir = layout.buildDirectory.dir("outputs/androidTest-results/connected/${buildType}/flavors/play")
     doLast {
         // androidTest currently creates one .xml file per emulator with aggregate results in this dir
         File folder = resultsDir.get().asFile
         File[] listOfFiles = folder.listFiles({ d, f -> f ==~ /.*.xml/ } as FilenameFilter)
+        // No results at all is the same failure this guard exists to catch, and it is how the guard
+        // itself goes unnoticed if the results layout moves again
+        if (!listOfFiles) {
+            throw new GradleScriptException("No androidTest result files in " + folder + " - the connected test run reported success without producing results.", null)
+        }
         for (File file : listOfFiles) {
-            // The aggregate results file currently contains a line with this pattern holding test count
-            String[] matches = file.readLines().findAll { it.contains('<testsuite') }
-            if (matches.length != 1) {
-                throw new GradleScriptException("Unable to determine count of tests executed for " + file.name + ". Regex pattern out of date?", null)
+            // The root element carries the aggregate count for one device, across any number of
+            // nested per-class <testsuite> elements
+            def declaredTests = new groovy.xml.XmlSlurper().parse(file).@tests.text()
+            if (!declaredTests.isInteger()) {
+                throw new GradleScriptException("Unable to determine count of tests executed for " + file.name + ". Results format changed?", null)
             }
-            if (!(matches[0] ==~ /.* tests="\d+" .*/) || matches[0].contains('tests="0"')) {
+            if (declaredTests.toInteger() == 0) {
                 throw new GradleScriptException("androidTest executed 0 tests for " + file.name + " - Probably a bug with the emulator. Try another image.", null)
             }
         }
     }
 }
 afterEvaluate {
-    tasks.named("connectedPlay${rootProject.androidTestVariantName}AndroidTest").configure {
-        finalizedBy('assertNonzeroAndroidTests')
+    def connectedTest = tasks.named("connectedPlay${rootProject.androidTestVariantName}AndroidTest").get()
+    // Keep the preflight device set in lockstep with AGP's connected-test selection. The nested
+    // properties include task --serial and connectedCheck --serial after Gradle parses command-line
+    // task options; AGP applies the same precedence in getTargetSerials().
+    //
+    // Reading these properties does not cause AGP's --serial crash. That crash is inside AGP 9.4
+    // DeviceProviderInstrumentTestTask.getFilteredDevices(), which calls List.remove on the
+    // ImmutableList returned by ListProperty.get(). Reproduced without this wiring; no public
+    // tracker ID found as of 2026-09-22. Use ANDROID_SERIAL until AGP copies the list first.
+    tasks.named('assertDevicesUnlocked').configure {
+        directSerials.set(connectedTest.testRunnerFactory.deviceSerialValues)
+        connectedCheckSerials.set(connectedTest.testRunnerFactory.connectedCheckDeviceSerials)
     }
+    connectedTest.dependsOn('assertDevicesUnlocked')
+    connectedTest.finalizedBy('assertNonzeroAndroidTests')
 
     // AGP bug: when testFixtures is enabled on an application module, the androidTest R8 task's
     // TESTED_CODE scope only includes the app's dependency artifacts, not the app's own compiled
@@ -405,13 +686,29 @@ dependencies {
     annotationProcessor libs.auto.service
 
     // modules
+    implementation project(":anki-common")
     implementation project(":common")
     implementation project(":common:android")
     implementation project(":compat")
     implementation project(":libanki")
     implementation project(":vbpd")
+    "baselineProfile" project(":baselineprofile")
+    implementation project(":widgets")
+
+    implementation(libs.google.analytics.kt)
 
     implementation libs.androidx.activity
+    // TODO: hoist the Compose enablement (kotlin.compose plugin, buildFeatures.compose,
+    // and the dependencies below) into a convention plugin under `buildSrc/` once the
+    // Kotlin-DSL migration of this build script lands
+    implementation libs.androidx.activity.compose
+    implementation platform(libs.androidx.compose.bom)
+    implementation libs.androidx.compose.ui
+    implementation libs.androidx.compose.ui.tooling.preview
+    implementation libs.androidx.compose.material3
+    implementation libs.androidx.lifecycle.viewmodel.compose
+    implementation libs.androidx.lifecycle.runtime.compose
+    debugImplementation libs.androidx.compose.ui.tooling
     implementation libs.androidx.annotation
     implementation libs.androidx.appcompat
     implementation libs.androidx.browser
@@ -420,8 +717,8 @@ dependencies {
     implementation libs.androidx.exifinterface
     implementation libs.androidx.fragment.ktx
     implementation libs.androidx.lifecycle.process
-    implementation libs.androidx.media
     implementation libs.androidx.preference.ktx
+    implementation libs.androidx.profileinstaller
     implementation libs.androidx.recyclerview
     implementation libs.androidx.sqlite.framework
     implementation libs.androidx.swiperefreshlayout
@@ -440,6 +737,7 @@ dependencies {
 
     implementation libs.protobuf.kotlin.lite // This is required when loading from a file
 
+    // TODO: migrate to `addAnkiBackendDependencies(...)` when this is a gradle.kts file
     Properties localProperties = new Properties()
     if (project.rootProject.file('local.properties').exists()) {
         localProperties.load(project.rootProject.file('local.properties').newDataInputStream())
@@ -461,7 +759,6 @@ dependencies {
     implementation libs.commons.compress
     implementation libs.commons.collections4 // SetUniqueList
     implementation libs.commons.io // FileUtils.contentEquals
-    implementation libs.mikehardy.google.analytics.java7
     implementation libs.okhttp
     implementation libs.slf4j.timber
     implementation libs.jakewharton.timber
@@ -480,7 +777,9 @@ dependencies {
 
     testImplementation testFixtures(project(":libanki"))
     testImplementation testFixtures(project(":common"))
+    testImplementation testFixtures(project(":common:android"))
     testImplementation testFixtures(project(":compat"))
+    testImplementation testFixtures(project(":anki-common"))
 
     // A path for a testing library which provide Parameterized Test
     testImplementation libs.junit.jupiter
@@ -489,8 +788,12 @@ dependencies {
     testImplementation libs.mockito.inline
     testImplementation libs.mockito.kotlin
     testImplementation libs.hamcrest
+    testImplementation libs.test.parameter.injector
     // robolectricDownloader.gradle *may* need a new SDK jar entry if they release one or if we change targetSdk. Instructions in that gradle file.
     testImplementation libs.robolectric
+    testImplementation libs.androidx.compose.ui.test.junit4
+    // Needed for createComposeRule(), but not for createAndroidComposeRule<YourActivity>()
+    debugImplementation libs.androidx.compose.ui.test.manifest
     testImplementation libs.androidx.test.core
     testImplementation libs.androidx.test.junit
     testImplementation libs.kotlin.reflect
@@ -539,5 +842,11 @@ dependencies {
     // Required so the ExperimentalCoroutinesApi opt-in (applied globally) doesn't cause
     // an "unresolved" warning, which is treated as an error due to allWarningsAsErrors
     testFixturesImplementation libs.kotlinx.coroutines.core
+    // The Kotlin Compose Compiler plugin attaches to every Kotlin compilation in the
+    // module including testFixtures, which has no @Composable code and refuses to
+    // run unless the Compose Runtime is on the classpath. compileOnly satisfies the
+    // plugin's version check without shipping the runtime in the testFixtures output.
+    testFixturesCompileOnly platform(libs.androidx.compose.bom)
+    testFixturesCompileOnly libs.androidx.compose.runtime
 
 }

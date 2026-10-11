@@ -1,24 +1,9 @@
-/*
- * Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
- * Copyright (c) 2020 Mani infinyte01@gmail.com
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2020 Mani infinyte01@gmail.com
 
 package com.ichi2.anki
 
 import android.content.Context
-import android.content.Intent
 import androidx.lifecycle.lifecycleScope
 import anki.scheduler.CardAnswer.Rating
 import com.github.zafarkhaja.semver.Version
@@ -36,6 +21,9 @@ import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.browser.search.SearchString
 import com.ichi2.anki.cardviewer.ViewerCommand
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.common.destinations.BrowserDestination
+import com.ichi2.anki.common.destinations.navigate
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.common.utils.ext.stringIterable
 import com.ichi2.anki.libanki.Card
 import com.ichi2.anki.libanki.Collection
@@ -379,12 +367,7 @@ open class AnkiDroidJsAPI(
 
                 "ttsStop" -> convertToByteArray(apiContract, talker.stop())
                 "searchCard" -> {
-                    val intent =
-                        Intent(context, CardBrowser::class.java).apply {
-                            putExtra("currentCard", currentCard.id)
-                            putExtra("search_query", apiParams)
-                        }
-                    activity.startActivity(intent)
+                    with(activity) { navigate(BrowserDestination.Search(query = apiParams, allDecks = false)) }
                     convertToByteArray(apiContract, true)
                 }
 

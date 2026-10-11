@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2024 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.utils
 
@@ -143,9 +129,13 @@ val Double.dp
 @JvmInline
 value class Dp(
     val dp: Float,
-) {
+) : Comparable<Dp> {
     // TODO: improve once we have context parameters
     fun toPx(context: Context) = dp.dpToPx(context)
+
+    operator fun plus(other: Dp) = Dp(dp = dp + other.dp)
+
+    override fun compareTo(other: Dp) = dp.compareTo(other.dp)
 }
 
 private fun Float.dpToPx(context: Context): Int = (this * context.resources.displayMetrics.density + 0.5f).toInt()

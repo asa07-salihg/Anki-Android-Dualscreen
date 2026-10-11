@@ -1,21 +1,9 @@
-/*
- *  Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.testutils
 
 import android.app.Activity
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.CheckResult
@@ -33,7 +21,6 @@ import com.ichi2.anki.IntroductionActivity
 import com.ichi2.anki.NoteEditorActivity
 import com.ichi2.anki.NoteTypeFieldEditor
 import com.ichi2.anki.Reviewer
-import com.ichi2.anki.SharedDecksActivity
 import com.ichi2.anki.SingleFragmentActivity
 import com.ichi2.anki.StudyOptionsActivity
 import com.ichi2.anki.account.AccountActivity
@@ -42,6 +29,7 @@ import com.ichi2.anki.multimedia.MultimediaActivity
 import com.ichi2.anki.notetype.ManageNotetypes
 import com.ichi2.anki.preferences.PreferencesActivity
 import com.ichi2.anki.previewer.CardViewerActivity
+import com.ichi2.anki.shareddeck.SharedDecksActivity
 import com.ichi2.anki.ui.windows.managespace.ManageSpaceActivity
 import com.ichi2.anki.ui.windows.permissions.AllPermissionsExplanationActivity
 import com.ichi2.anki.ui.windows.permissions.PermissionsActivity
@@ -75,7 +63,6 @@ object ActivityList {
             // Likely has unhandled intents
             get(Reviewer::class.java),
             get(PreferencesActivity::class.java),
-            // Info has unhandled intents
             get(Info::class.java),
             get(CardTemplateEditor::class.java) { intentForCardTemplateEditor() },
             get(CardTemplateBrowserAppearanceEditor::class.java) { intentForCardTemplateBrowserAppearanceEditor() },
@@ -91,7 +78,7 @@ object ActivityList {
             get(InstantNoteEditorActivity::class.java),
             get(MultimediaActivity::class.java),
             get(DeckPickerWidgetConfig::class.java),
-            get(CardAnalysisWidgetConfig::class.java),
+            get(CardAnalysisWidgetConfig::class.java) { intentForWidgetConfig() },
             get(AccountActivity::class.java),
         )
 
@@ -105,6 +92,8 @@ object ActivityList {
 
     private fun intentForCardTemplateEditor(): Intent = Intent().apply { putExtra("noteTypeId", 1L) }
 
+    private fun intentForWidgetConfig(): Intent = Intent().apply { putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 1) }
+
     class ActivityLaunchParam(
         var activity: Class<out Activity>,
         private var intentBuilder: Function<Context, Intent>,
@@ -113,7 +102,9 @@ object ActivityList {
 
         fun build(context: Context): ActivityController<out Activity> =
             Robolectric
-                .buildActivity(activity, intentBuilder.apply(context))
+                .buildActivity(activity, buildIntent(context))
+
+        fun buildIntent(context: Context): Intent = intentBuilder.apply(context)
 
         val className: String = activity.name
 

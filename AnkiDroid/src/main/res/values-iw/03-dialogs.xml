@@ -6,51 +6,28 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="check_db_warning">This may take a long time. Proceed?</string>
-    <string name="contextmenu_deckpicker_delete_deck" maxLength="28">מחיקת חפיסה</string>
+    <string name="check_db_warning">זה יכול לקחת הרבה זמן. להמשיך?</string>
     <string name="delete_deck_title">למחוק את החפיסה?‏</string>
     <plurals name="delete_deck_message">
         <item quantity="one">למחוק את כל הכרטיסים ב-%1$s? הוא מכיל %2$d כרטיסים</item>
         <item quantity="two">למחוק את כל הכרטיסים ב-%1$s? הוא מכיל %2$d כרטיסים</item>
-        <item quantity="many">למחוק את כל הכרטיסים ב-%1$s? הוא מכיל %2$d כרטיסים</item>
         <item quantity="other">למחוק את כל הכרטיסים ב-%1$s? הוא מכיל %2$d כרטיסים</item>
     </plurals>
     <string name="delete_cram_deck_message">למחוק את החפיסה %s המסוננת ולשלוח את כל הקלפים בחזרה לחפיסות המקוריות שלהם?</string>
@@ -61,7 +38,6 @@
     <plurals name="reset_cards_dialog_acknowledge">
         <item quantity="one">כרטיס אחד אופס</item>
         <item quantity="two">%d כרטיסים אופסו</item>
-        <item quantity="many">%d כרטיסים אופסו</item>
         <item quantity="other">%d כרטיסים אופסו</item>
     </plurals>
     <string name="answering_error_title">שגיאת מסד נתונים</string>
@@ -75,7 +51,7 @@
     <string name="custom_study_new_extend">הוספה/הורדה(“-3”) הגבלת כרטיסים חדשים להיום ב</string>
     <string name="custom_study_rev_extend">הוספה/הורדה(“-3”) הגבלת חזרות להיום ב</string>
     <string name="custom_study_forgotten">חזרה על כרטיסים נשכחים בx ימים האחרונים</string>
-    <string name="custom_study_ahead">עבור כמה ימים ברצונך לשנן מראש?</string>
+    <string name="custom_study_ahead_description">Review cards due in the next:</string>
     <string name="custom_study_preview">צפייה ראשונית בכרטיסים חדשים שנוספו בx ימים האחרונים:</string>
     <string name="custom_study_tags">בחר x קלפים מהחפיסה:</string>
     <string name="storage_full_title">האיחסון מלא</string>
@@ -87,16 +63,17 @@
     <string name="restore_backup_choose_another">אחר</string>
     <string name="dialog_cancel">ביטול</string>
     <string name="dialog_ok">אישור</string>
-    <string name="dialog_add" comment="Positive dialog action button label to add \'something\'">Add</string>
-    <string name="restore">Restore</string>
+    <string name="dialog_add" comment="Positive dialog action button label to add \'something\'">להוסיף</string>
+    <string name="restore">להחזיר</string>
     <string name="dialog_confirm" tools:ignore="UnusedResources">אשר</string>
     <string name="dialog_no">לא</string>
     <string name="dialog_yes">כן</string>
     <string name="dialog_keep">שמור</string>
     <string name="dialog_remove">הסר</string>
-    <string name="dialog_exit" comment="Label for a button which will exit/finish the current screen">Exit</string>
+    <string name="dialog_exit" comment="Label for a button which will exit/finish the current screen">לצאת</string>
     <string name="dialog_continue">המשך</string>
     <string name="dialog_processing">מעבד&#8230;</string>
+    <string name="dialog_allow">Allow</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">יצירה</string>
     <string name="dialog_positive_delete" maxLength="28">מחיקה</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -112,13 +89,12 @@
     <string name="check_media_warning">This may take a long time with large media collections. Proceed?</string>
     <string name="check_media_message">קבצי המדיה בבדיקה&#8230;</string>
     <string name="check_media_adding_missing_tag">הוספת תגיות&#8230;</string>
-    <string name="check_media_tags_added">התגית התווספה</string>
+    <string name="check_media_tags_added">Tagging results</string>
     <string name="delete_media_message">המדיה נמחקת&#8230;</string>
     <string name="delete_media_result_title">תוצאת מחיקה</string>
     <plurals name="delete_media_result_message">
         <item quantity="one">קובץ אחד נמחק</item>
         <item quantity="two">שני קבצים נמחקו</item>
-        <item quantity="many">%d קבצים נמחקו</item>
         <item quantity="other">%d קבצים נמחקו</item>
     </plurals>
     <!-- Tags Dialog Options -->
@@ -133,7 +109,7 @@
     <!-- Multimedia - Audio View -->
     <string name="multimedia_editor_audio_permission_denied">הרשאת הקלטת שמע נדחתה</string>
     <string name="permission_denied">הרשאה נדחתה</string>
-    <string name="recording_permission_denied_message">נדרשת הרשאת מיקרופון עבור התכונה \"הקלטת קול\". אנא אשר אותה בהגדרות האפליקציה.</string>
+    <string name="microphone_permission_denied_message">Microphone permission denied. Please grant it in the app settings.</string>
     <!-- Database Integrity Check -->
     <string name="integrity_check_continue_anyway">המשך בכל זאת</string>
     <string name="integrity_check_insufficient_space">״בדוק מסד נתונים״ משתמש בכמות גדולה של אחסון זמני.\n\nמומלץ מאוד שיהיה לך לפחות %s שטח פנוי במכשיר שלך לפני שתמשיך.</string>
@@ -197,7 +173,6 @@
     <plurals name="sync_automatic_sync_needs_more_time">
         <item quantity="one" comment="Consider keeping the unbreakable space after the digit">ייתכן שסנכרון אוטומטי יופעל בעוד %d שניה</item>
         <item quantity="two">ייתכן שסנכרון אוטומטי יופעל בעוד %d שניות</item>
-        <item quantity="many">ייתכן שסנכרון אוטומטי יופעל בעוד %d שניות</item>
         <item quantity="other" comment="Consider keeping the unbreakable space after the digit">ייתכן שסנכרון אוטומטי יופעל בעוד %d שניות</item>
     </plurals>
     <string name="metered_sync_data_warning">ספק האינטרנט שלך עשוי לגבות כסף עבור שימוש בנתונים</string>
@@ -227,25 +202,21 @@
     <plurals name="set_due_date_single_day_label" comment="a date control is provided afterwards">
         <item quantity="one">הצג כרטיס ב</item>
         <item quantity="two">הצג כרטיסים ב</item>
-        <item quantity="many">הצג כרטיסים ב</item>
         <item quantity="other">הצג כרטיסים ב</item>
     </plurals>
     <plurals name="set_due_date_range_label" comment="a date control is provided afterwards">
         <item quantity="one">הצג כרטיס בטווח</item>
         <item quantity="two">הצג כרטיסים בטווח</item>
-        <item quantity="many">הצג כרטיסים בטווח</item>
         <item quantity="other">הצג כרטיסים בטווח</item>
     </plurals>
     <plurals name="set_due_date_label_suffix" comment="a suffix on a text field allowing a user to enter a number of days">
         <item quantity="one">יום</item>
         <item quantity="two">ימים</item>
-        <item quantity="many">ימים</item>
         <item quantity="other">ימים</item>
     </plurals>
     <plurals name="set_due_date_current_interval">
         <item quantity="one">מרווח נוכחי: %d יום</item>
         <item quantity="two">מרווח נוכחי: %d ימים</item>
-        <item quantity="many">מרווח נוכחי: %d ימים</item>
         <item quantity="other">מרווח נוכחי: %d ימים</item>
     </plurals>
     <string name="range_delimiter" comment="Placed between two input boxes to denote a range">-</string>
@@ -270,15 +241,15 @@
     <string name="tts_error_dialog_supported_voices_button_text">אפשרויות קול</string>
     <!-- import_cache_error_resolutions -->
     <string name="import_error_resolution_try_again">Re-import the file</string>
-    <string name="import_error_resolution_free_up_space">Ensure there is sufficient free space on your device</string>
-    <string name="import_error_resolution_check_internet">Ensure you are connected to the internet</string>
-    <string name="import_error_resolution_copy_to_device">Copy the file to your device and try again with the local file</string>
-    <string name="import_error_resolution_select_file">Open the file using your device’s file browser app</string>
+    <string name="import_error_resolution_free_up_space">וודא שיש מספיק מקום פנוי על מכשירך</string>
+    <string name="import_error_resolution_check_internet">וודא שאתה מחובר לאינטרנט</string>
+    <string name="import_error_resolution_copy_to_device">העתק את הקובץ למכשירך ונסה שוב עם הקובץ המקומי</string>
+    <string name="import_error_resolution_select_file">פתח את הקובץ עם אפליקצית דפדפן הקבצים של מכשירך</string>
     <!-- Post-login dialog -->
     <string name="login_successful">Login successful</string>
-    <string name="sync_now">Sync now?</string>
+    <string name="sync_now">סנכרן עכשיו?</string>
     <!--Change Note Type Dialog Fragment-->
-    <string name="card_numbers_unchanged">Card numbers will remain unchanged</string>
+    <string name="card_numbers_unchanged">מספרי קלפים ישארו ללא שינויים</string>
     <!-- Subset of TR.changeNotetypeToFromCloze -->
     <string name="extra_cloze_deletions_removed">If changing to a regular note type, and there are more cloze deletions than available card templates, any extra cards will be removed.</string>
     <string name="different_note_types_selected">Please select notes from only one notetype.</string>
@@ -292,8 +263,15 @@
     <string name="special_field_deck_help" comment="%s: either blank or \' %s\'">The full deck of the card, including parent decks%s</string>
     <string name="special_field_subdeck_help" comment="%s: either blank or \' %s\'">The current deck of the card, excluding parent decks%s</string>
     <string name="special_field_flag_help">Outputs ‘%1$s’, where %2$s is the flag code (%3$s\–%4$s\)</string>
-    <string name="special_field_tags_help" comment="%s: either blank or \' %s\'">The tags of the note%s</string>
+    <string name="special_field_tags_help" comment="%s: either blank or \' %s\'">התגיות של הערה%s</string>
     <string name="special_field_card_id_help" comment="%s: either blank or \' %s\'">The ID of the card%s</string>
-    <string name="special_field_card_help" comment="%s: either blank or \' %s\'">The name of the card template%s</string>
+    <string name="special_field_card_help" comment="%s: either blank or \' %s\'">השם של תבנית הקלף%s</string>
     <string name="special_field_type_help" comment="%s: either blank or \' %s\'">The name of the note type%s</string>
+    <!-- Change Note Type Dialog -->
+    <string name="change_note_type_from" comment="Label indicating the original note type before changing it">From</string>
+    <string name="change_note_type_to" comment="Label indicating the new note type to change to">To</string>
+    <!-- Add profile dialog -->
+    <string name="profile_name" comment="Label of the text field where the user types the name of a new profile">Profile name</string>
+    <string name="profile_name_empty_error" comment="Error shown when the user leaves the profile name empty">Profile name can’t be empty</string>
+    <string name="profile_name_too_long_error" comment="Error shown when a profile name exceeds the maximum length. %1$d is the maximum number of characters">Profile name must be %1$d characters or fewer</string>
 </resources>

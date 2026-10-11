@@ -1,19 +1,8 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 plugins {
-    alias(libs.plugins.kotlin.jvm)
+    id("ankidroid.jvm.library")
     `java-test-fixtures`
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget = JvmTarget.JVM_17
-    }
 }
 
 dependencies {
@@ -24,6 +13,8 @@ dependencies {
     implementation(libs.androidx.annotation)
     implementation(libs.slf4j.api)
 
+    // sealedSubclasses in AnalyticsEventTest needs full reflection
+    testImplementation(libs.kotlin.reflect)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.vintage.engine)
     testImplementation(libs.hamcrest)
@@ -32,5 +23,6 @@ dependencies {
 
     testFixturesImplementation(libs.hamcrest)
     testFixturesImplementation(libs.androidx.annotation)
+    testFixturesImplementation(libs.junit.vintage.engine)
     testFixturesImplementation(libs.slf4j.api)
 }

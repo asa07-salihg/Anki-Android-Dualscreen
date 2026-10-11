@@ -1,22 +1,10 @@
-/*
- * Copyright (c) 2025 Divyansh Kushwaha <thedroiddiv@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 Divyansh Kushwaha <thedroiddiv@gmail.com>
 
 package com.ichi2.anki.ui.windows.reviewer.whiteboard
 
 import android.content.Context
+import android.graphics.Color
 import android.os.Build
 import android.view.Choreographer
 import android.widget.FrameLayout
@@ -61,7 +49,18 @@ fun Context.showColorPickerDialog(
             // This ensures the BrightnessSlideBar is fully initialized before applying
             // the initial color. Calling it too early causes the slider to use its
             // default position, resulting in an incorrect displayed color.
-            colorPickerView.post { colorPickerView.setInitialColor(initialColor) }
+            colorPickerView.post {
+                colorPickerView.setInitialColor(initialColor)
+                // The wheel only sets hue and saturation; brightness comes from the slider below it.
+                // A near-black seed parks that slider at zero, so any hue picked on the wheel would
+                // assemble back to black and the picker would seem to ignore the choice (issue #21329).
+                // Lift the slider once so the wheel is usable. Brighter seeds keep their own brightness.
+                if (initialColor.isNearBlack()) {
+                    colorPickerView.post {
+                        colorPickerView.brightnessSlider?.setSelectorByHalfSelectorPosition(1f)
+                    }
+                }
+            }
             // Bubble showing the selected color
             val bubbleFlag = BubbleFlag(this@showColorPickerDialog)
             colorPickerView.flagView = bubbleFlag
@@ -106,6 +105,19 @@ fun Context.showColorPickerDialog(
             choreographer.postFrameCallback(callback)
         }.setOnDismissListener { dismissed = true }
 }
+
+/**
+ * Whether the color's brightness is low enough to read as black. The brightness slider stores
+ * exactly this value, so a near-black color means the slider would be parked near zero.
+ */
+private fun Int.isNearBlack(): Boolean {
+    val hsv = FloatArray(3)
+    Color.colorToHSV(this, hsv)
+    return hsv[2] <= NEAR_BLACK_BRIGHTNESS
+}
+
+/** Brightness (HSV value) at or below which a color is treated as black. */
+private const val NEAR_BLACK_BRIGHTNESS = 0.05f
 
 /**
  * Custom flag view that displays the selected color in a bubble above the color picker selector.

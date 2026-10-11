@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2021 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.servicelayer
 
 import android.content.Context
@@ -22,7 +9,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
 import androidx.core.os.LocaleListCompat
-import com.ichi2.anki.analytics.UsageAnalytics
+import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
 import com.ichi2.anki.browser.BrowserColumnCollection
 import com.ichi2.anki.browser.CardBrowserColumn.ANSWER
 import com.ichi2.anki.browser.CardBrowserColumn.CARD
@@ -41,12 +28,13 @@ import com.ichi2.anki.browser.CardBrowserColumn.SFLD
 import com.ichi2.anki.browser.CardBrowserColumn.TAGS
 import com.ichi2.anki.cardviewer.Gesture
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.common.preferences.sharedPrefs
+import com.ichi2.anki.common.utils.HashUtil.hashSetInit
 import com.ichi2.anki.libanki.Consts
 import com.ichi2.anki.libanki.utils.append
 import com.ichi2.anki.model.CardsOrNotes
 import com.ichi2.anki.noteeditor.CustomToolbarButton
 import com.ichi2.anki.preferences.reviewer.ViewerAction
-import com.ichi2.anki.preferences.sharedPrefs
 import com.ichi2.anki.reviewer.Binding
 import com.ichi2.anki.reviewer.Binding.Companion.keyCode
 import com.ichi2.anki.reviewer.CardSide
@@ -55,10 +43,8 @@ import com.ichi2.anki.reviewer.MappableBinding
 import com.ichi2.anki.reviewer.MappableBinding.Companion.toPreferenceString
 import com.ichi2.anki.reviewer.ReviewerBinding
 import com.ichi2.anki.reviewer.ReviewerBinding.Companion.fromPreferenceString
-import com.ichi2.utils.HashUtil.hashSetInit
 import timber.log.Timber
 import java.util.Locale
-import kotlin.collections.ArrayList
 import kotlin.math.round
 
 private typealias VersionIdentifier = Int
@@ -137,6 +123,8 @@ object PreferenceUpgradeService {
                     yield(UpgradeToggleBacksideOnlyControl())
                     yield(UpgradeThemes())
                     yield(UpgradeAnswerControls())
+                    yield(RemoveDeveloperFindReplace())
+                    yield(ResetAnalyticsOptIn2())
                 }
 
             /** Returns a list of preference upgrade classes which have not been applied */
@@ -594,11 +582,9 @@ object PreferenceUpgradeService {
          * Universal Analytics to Google Analytics 4, we want analytics to STRICTLY be opt-in
          *
          * As we likely have inadvertent opt-ins, we stated that we would opt everyone out:
-         * https://ankidroid.org/docs/changelog.html#_version_2_16_5_20230906
+         * https://docs.ankidroid.org/changelog.html#_version_2_16_5_20230906
          *
          * We now use "analytics_opt_in"
-         *
-         * @see [UsageAnalytics.ANALYTICS_OPTIN_KEY]
          */
         internal class ResetAnalyticsOptIn : PreferenceUpgrade(17) {
             override fun upgrade(preferences: SharedPreferences) = preferences.edit { remove("analyticsOptIn") }
@@ -899,6 +885,23 @@ object PreferenceUpgradeService {
                     putString("binding_SHOW_ANSWER", showAnswerBindings.toPreferenceString())
                 }
             }
+        }
+
+        internal class RemoveDeveloperFindReplace : PreferenceUpgrade(28) {
+            override fun upgrade(preferences: SharedPreferences) {
+                preferences.edit {
+                    remove("browserFindReplace")
+                }
+            }
+        }
+
+        /**
+         * Removes the legacy "analytics_opt_in" key so all users are re-prompted
+         * to opt in under the new GA4-backed analytics implementation, which
+         * stores the opt-in under [AnkiDroidUsageAnalytics.ANALYTICS_OPTIN_KEY].
+         */
+        internal class ResetAnalyticsOptIn2 : PreferenceUpgrade(29) {
+            override fun upgrade(preferences: SharedPreferences) = preferences.edit { remove("analytics_opt_in") }
         }
     }
 }

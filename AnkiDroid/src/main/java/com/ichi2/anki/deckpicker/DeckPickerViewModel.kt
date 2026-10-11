@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2024 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.deckpicker
 
@@ -34,8 +20,10 @@ import com.ichi2.anki.CollectionManager.withOpenColOrNull
 import com.ichi2.anki.DeckPicker
 import com.ichi2.anki.InitialActivity
 import com.ichi2.anki.OnErrorListener
-import com.ichi2.anki.PermissionSet
-import com.ichi2.anki.browser.BrowserDestination
+import com.ichi2.anki.StoragePermissionSet
+import com.ichi2.anki.common.destinations.BrowserDestination
+import com.ichi2.anki.common.destinations.DeckOptionsDestination
+import com.ichi2.anki.common.destinations.NoteEditorDestination
 import com.ichi2.anki.configureRenderingMode
 import com.ichi2.anki.launchCatchingIO
 import com.ichi2.anki.libanki.CardId
@@ -47,10 +35,8 @@ import com.ichi2.anki.libanki.sched.DeckNode
 import com.ichi2.anki.libanki.undoAvailable
 import com.ichi2.anki.libanki.undoLabel
 import com.ichi2.anki.libanki.utils.extend
-import com.ichi2.anki.noteeditor.NoteEditorLauncher
 import com.ichi2.anki.notetype.ManageNoteTypesDestination
 import com.ichi2.anki.observability.undoableOp
-import com.ichi2.anki.pages.DeckOptionsDestination
 import com.ichi2.anki.performBackupInBackground
 import com.ichi2.anki.reviewreminders.ScheduleRemindersDestination
 import com.ichi2.anki.settings.Prefs
@@ -70,6 +56,7 @@ import kotlinx.coroutines.withContext
 import net.ankiweb.rsdroid.RustCleanup
 import net.ankiweb.rsdroid.exceptions.BackendNetworkException
 import timber.log.Timber
+import com.ichi2.anki.common.destinations.Destination as NavigateDestination
 
 /**
  * ViewModel for the [DeckPicker]
@@ -135,6 +122,7 @@ class DeckPickerViewModel :
     val deckDeletedNotification = MutableSharedFlow<DeckDeletionResult>(extraBufferCapacity = 1)
     val emptyCardsNotification = MutableSharedFlow<EmptyCardsResult>(extraBufferCapacity = 1)
     val flowOfDestination = MutableSharedFlow<Destination>(extraBufferCapacity = 1)
+    val flowOfNavigate = MutableSharedFlow<NavigateDestination>(extraBufferCapacity = 1)
     override val onError = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val flowOfExportDeck = MutableSharedFlow<DeckId>()
     val flowOfCreateShortcut = MutableSharedFlow<ShortcutData>()
@@ -166,10 +154,12 @@ class DeckPickerViewModel :
             tree.onlyHasDefaultDeck() && noCards
         }.stateIn(viewModelScope, SharingStarted.Eagerly, initialValue = null)
 
+    // Sum the top-level decks rather than the root, whose aggregate the backend
+    // caps at 9999 (issue #17605). See DeckNode.totalCardsDue.
     val flowOfCardsDue =
         combine(flowOfDeckDueTree, flowOfDeckListInInitialState) { tree, inInitialState ->
             if (tree == null || inInitialState != false) return@combine null
-            tree.newCount + tree.revCount + tree.lrnCount
+            tree.totalCardsDue()
         }
 
     /** "Studied N cards in 0 seconds today */
@@ -291,7 +281,7 @@ class DeckPickerViewModel :
     fun browseCards(deckId: DeckId) =
         launchCatchingIO {
             withCol { decks.select(deckId) }
-            flowOfDestination.emit(BrowserDestination.ToDeck(deckId))
+            flowOfNavigate.emit(BrowserDestination.ToDeck(deckId))
         }
 
     fun addNote(
@@ -301,7 +291,32 @@ class DeckPickerViewModel :
         if (deckId != null && setAsCurrent) {
             withCol { decks.select(deckId) }
         }
-        flowOfDestination.emit(NoteEditorLauncher.AddNote(deckId))
+        flowOfNavigate.emit(NoteEditorDestination.AddNote(deckId))
+    }
+
+    val flowOfShowContextMenu = MutableSharedFlow<DeckId>(extraBufferCapacity = 1)
+
+    data class RightClickMenuRequest(
+        val deckId: DeckId,
+        val x: Float,
+        val y: Float,
+    )
+
+    val flowOfShowRightClickContextMenu = MutableSharedFlow<RightClickMenuRequest>(extraBufferCapacity = 1)
+
+    fun requestContextMenu(deckId: DeckId) =
+        viewModelScope.launch {
+            selectDeck(deckId).join()
+            flowOfShowContextMenu.emit(deckId)
+        }
+
+    fun requestRightClickContextMenu(
+        deckId: DeckId,
+        x: Float,
+        y: Float,
+    ) = viewModelScope.launch {
+        selectDeck(deckId).join()
+        flowOfShowRightClickContextMenu.emit(RightClickMenuRequest(deckId, x, y))
     }
 
     /**
@@ -321,7 +336,7 @@ class DeckPickerViewModel :
     ) = launchCatchingIO {
         // open cram options if filtered deck, otherwise open regular options
         val filtered = isFiltered ?: withCol { decks.isFiltered(deckId) }
-        flowOfDestination.emit(DeckOptionsDestination(deckId = deckId, isFiltered = filtered))
+        flowOfNavigate.emit(DeckOptionsDestination(deckId = deckId, isFiltered = filtered))
     }
 
     fun unburyDeck(deckId: DeckId) =
@@ -480,7 +495,7 @@ class DeckPickerViewModel :
 
     sealed class StartupResponse {
         data class RequestPermissions(
-            val requiredPermissions: PermissionSet,
+            val requiredPermissions: StoragePermissionSet,
         ) : StartupResponse()
 
         /**
@@ -509,7 +524,7 @@ class DeckPickerViewModel :
         }
 
         Timber.d("handleStartup: Continuing after permission granted")
-        val failure = InitialActivity.getStartupFailureType(environment::initializeAnkiDroidFolder)
+        val failure = InitialActivity.getStartupFailureType(environment.preferences, environment::initializeAnkiDroidFolder)
         if (failure != null) {
             flowOfStartupResponse.value = StartupResponse.FatalError(failure)
             return
@@ -525,7 +540,10 @@ class DeckPickerViewModel :
     interface AnkiDroidEnvironment {
         fun hasRequiredPermissions(): Boolean
 
-        val requiredPermissions: PermissionSet
+        val requiredPermissions: StoragePermissionSet
+
+        /** The preferences of the (profile) context the collection path is read from */
+        val preferences: SharedPreferences
 
         fun initializeAnkiDroidFolder(): Boolean
     }

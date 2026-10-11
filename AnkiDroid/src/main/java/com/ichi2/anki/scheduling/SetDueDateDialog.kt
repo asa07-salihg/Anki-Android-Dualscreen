@@ -1,22 +1,9 @@
-/*
- *  Copyright (c) 2024 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.scheduling
 
 import android.app.Dialog
+import android.content.DialogInterface
 import android.content.res.Configuration
 import android.os.Bundle
 import android.text.InputFilter
@@ -28,12 +15,12 @@ import android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import androidx.annotation.CheckResult
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -45,7 +32,11 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.R
+import com.ichi2.anki.analytics.AnalyticsDialogFragment
 import com.ichi2.anki.asyncCatching
+import com.ichi2.anki.browser.IdsFile
+import com.ichi2.anki.browser.removeSafely
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.databinding.DialogSetDueDateBinding
 import com.ichi2.anki.databinding.FragmentSetDueDateRangeBinding
 import com.ichi2.anki.databinding.FragmentSetDueDateSingleBinding
@@ -55,24 +46,32 @@ import com.ichi2.anki.libanki.sched.Scheduler
 import com.ichi2.anki.requireAnkiActivity
 import com.ichi2.anki.scheduling.SetDueDateViewModel.Tab
 import com.ichi2.anki.servicelayer.getFSRSStatus
-import com.ichi2.anki.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.utils.doOnImeHidden
+import com.ichi2.anki.utils.ext.launchCollectionInLifecycleScope
 import com.ichi2.anki.utils.ext.requireBoolean
+import com.ichi2.anki.utils.ext.requireParcelable
+import com.ichi2.anki.utils.ext.showDialogFragment
 import com.ichi2.anki.utils.openUrl
 import com.ichi2.anki.withProgress
 import com.ichi2.utils.AndroidUiUtils
 import com.ichi2.utils.create
 import com.ichi2.utils.dp
 import com.ichi2.utils.negativeButton
-import com.ichi2.utils.neutralButton
 import com.ichi2.utils.positiveButton
 import com.ichi2.utils.title
+import com.ichi2.utils.titleWithHelpIcon
 import dev.androidbroadcast.vbpd.viewBinding
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.io.File
+import java.io.IOException
 import kotlin.math.min
 
 /**
@@ -80,7 +79,7 @@ import kotlin.math.min
  *
  * @see SetDueDateViewModel
  */
-class SetDueDateDialog : DialogFragment() {
+class SetDueDateDialog : AnalyticsDialogFragment() {
     // We explicitly do not use calendar controls in this class
     // User feedback:
     // (1) Don't have to think about what today is in order to use it,
@@ -97,14 +96,25 @@ class SetDueDateDialog : DialogFragment() {
     // used to determine if a rotation has taken place
     private var initialRotation: Int = 0
 
-    val cardIds: LongArray
-        get() = requireNotNull(requireArguments().getLongArray(ARG_CARD_IDS)) { ARG_CARD_IDS }
+    val cardIds: List<Long>
+        get() = requireArguments().requireParcelable<IdsFile>(ARG_IDS_FILE).getIds()
 
     val fsrsEnabled: Boolean
         get() = requireArguments().requireBoolean(ARG_FSRS)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val cardIds =
+            try {
+                this.cardIds
+            } catch (e: IOException) {
+                // the file may be missing, or truncated if the write was interrupted
+                Timber.w(e, "Failed to read cardIds")
+                showThemedToast(requireContext(), R.string.something_wrong, false)
+                dismiss()
+                return
+            }
+
         viewModel.init(cardIds, fsrsEnabled)
         Timber.d("Set due date dialog: %d card(s)", cardIds.size)
         this.initialRotation = getScreenRotation()
@@ -118,6 +128,23 @@ class SetDueDateDialog : DialogFragment() {
                 }
                 dismiss()
             }
+        }
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+
+        // DialogFragment also calls this from onDestroyView, so without this check a rotation
+        // would delete the file which the recreated dialog still needs
+        if (activity?.isChangingConfigurations == true) {
+            Timber.d("not removing IdsFile: dialog is being recreated")
+            return
+        }
+
+        if (arguments?.containsKey(ARG_IDS_FILE) == true) {
+            requireArguments()
+                .requireParcelable<IdsFile>(ARG_IDS_FILE)
+                .removeSafely("SetDueDateDialog")
         }
     }
 
@@ -140,18 +167,17 @@ class SetDueDateDialog : DialogFragment() {
         binding = DialogSetDueDateBinding.inflate(layoutInflater)
         return MaterialAlertDialogBuilder(requireContext())
             .create {
+                titleWithHelpIcon(
+                    text = TR.sentenceCase.setDueDate,
+                ) {
+                    openUrl(R.string.link_set_due_date_help)
+                }
                 title(text = TR.sentenceCase.setDueDate)
                 positiveButton(R.string.dialog_ok) { launchUpdateDueDate() }
                 negativeButton(R.string.dialog_cancel)
-                neutralButton(R.string.help)
                 setView(binding.root)
             }.apply {
                 show()
-
-                // This onClickListener stops the dialog from closing when the button is clicked.
-                getButton(Dialog.BUTTON_NEUTRAL).setOnClickListener {
-                    openUrl(R.string.link_set_due_date_help)
-                }
 
                 lifecycleScope.launch {
                     viewModel.isValidFlow.collect { isValid -> positiveButton.isEnabled = isValid }
@@ -166,6 +192,7 @@ class SetDueDateDialog : DialogFragment() {
                         .first { it.position == position }
                         .let { selectedTab ->
                             tab.setIcon(selectedTab.icon)
+                            tab.setText(selectedTab.text)
                         }
                 }.attach()
                 binding.tabLayout.selectTab(binding.tabLayout.getTabAt(0))
@@ -187,8 +214,10 @@ class SetDueDateDialog : DialogFragment() {
                 binding.changeInterval.also { cb ->
                     // `.also` is used as .isVisible is an extension, so Kotlin prefers
                     // incorrectly setting Fragment.isVisible
-                    cb.isVisible = viewModel.canSetUpdateIntervalToMatchDueDate
-                    cb.isChecked = viewModel.updateIntervalToMatchDueDate
+                    viewModel.fsrsEnabled.launchCollectionInLifecycleScope {
+                        cb.isVisible = viewModel.canSetUpdateIntervalToMatchDueDate
+                        cb.isChecked = viewModel.updateIntervalToMatchDueDate
+                    }
                     cb.setOnCheckedChangeListener { _, isChecked ->
                         viewModel.updateIntervalToMatchDueDate = isChecked
                     }
@@ -240,25 +269,51 @@ class SetDueDateDialog : DialogFragment() {
     private fun launchUpdateDueDate(showError: Boolean = true) = requireAnkiActivity().updateDueDate(viewModel, showError)
 
     companion object {
-        const val ARG_CARD_IDS = "ARGS_CARD_IDS"
+        const val ARG_IDS_FILE = "ARGS_IDS_FILE"
         const val ARG_FSRS = "ARGS_FSRS"
         const val MAX_WIDTH_DP = 450f
 
         private const val RESULT_SUBMIT_DUE_DATE = "SubmitDueDate"
 
+        // Only accessed on the main thread.
+        private val pendingActivities = mutableSetOf<FragmentActivity>()
+
+        /** Keeps the existing dialog and its input when another request arrives. */
+        suspend fun show(
+            activity: FragmentActivity,
+            cardIds: List<CardId>,
+        ) = withContext(Dispatchers.Main.immediate) {
+            if (activity.supportFragmentManager.fragments.any { it is SetDueDateDialog } || !pendingActivities.add(activity)) {
+                Timber.d("Ignoring 'set due date' request: dialog is already open or being prepared")
+                return@withContext
+            }
+            try {
+                val dialog = newInstance(activity.externalCacheDir ?: activity.cacheDir, cardIds)
+                activity.showDialogFragment(dialog)
+            } finally {
+                pendingActivities.remove(activity)
+            }
+        }
+
+        @VisibleForTesting
         @CheckResult
-        suspend fun newInstance(cardIds: List<CardId>) =
-            SetDueDateDialog().apply {
+        suspend fun newInstance(
+            cacheDir: File,
+            cardIds: List<CardId>,
+        ): SetDueDateDialog {
+            val fsrsEnabled = getFSRSStatus() ?: false.also { Timber.w("FSRS Status error") }
+            // getFSRSStatus swallows cancellation, so check for it explicitly: the dialog would
+            // fail to show and leave behind a file which only onDismiss removes
+            currentCoroutineContext().ensureActive()
+            return SetDueDateDialog().apply {
                 arguments =
-                    bundleOf(
-                        ARG_CARD_IDS to cardIds.toLongArray(),
-                        ARG_FSRS to (
-                            getFSRSStatus()
-                                ?: false.also { Timber.w("FSRS Status error") }
-                        ),
-                    )
+                    Bundle().apply {
+                        putParcelable(ARG_IDS_FILE, IdsFile(cacheDir, cardIds, "set-due-date"))
+                        putBoolean(ARG_FSRS, fsrsEnabled)
+                    }
                 Timber.i("Showing 'set due date' dialog for %d cards", cardIds.size)
             }
+        }
     }
 
     class DueDateStateAdapter(
@@ -313,7 +368,7 @@ class SetDueDateDialog : DialogFragment() {
                         ) {
                             parentFragmentManager.setFragmentResult(
                                 RESULT_SUBMIT_DUE_DATE,
-                                bundleOf(),
+                                Bundle(),
                             )
                             true
                         } else {
@@ -388,7 +443,7 @@ class SetDueDateDialog : DialogFragment() {
                         ) {
                             parentFragmentManager.setFragmentResult(
                                 RESULT_SUBMIT_DUE_DATE,
-                                bundleOf(),
+                                Bundle(),
                             )
                             true
                         } else {

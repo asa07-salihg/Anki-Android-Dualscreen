@@ -1,23 +1,14 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
---><resources>
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
+
+<resources>
 
     <!-- CardBrowser -->
     <plurals name="card_browser_subtitle">
@@ -29,12 +20,10 @@
         <item quantity="other">%d notes shown</item>
     </plurals>
 
-    <string name="card_browser_all_decks">All decks</string>
     <plurals name="card_browser_delete_notes">
         <item quantity="one">Delete note</item>
         <item quantity="other">Delete notes</item>
     </plurals>
-    <string name="card_browser_change_deck" maxLength="28">Change deck</string>
     <string name="delete_card_title">Delete note?</string>
     <string name="card_browser_show_marked" maxLength="28">Filter marked</string>
     <string name="card_browser_show_suspended" maxLength="28">Filter suspended</string>
@@ -55,19 +44,6 @@
     <string name="card_browser_cram_search" maxLength="28" comment = "Menu entry to start a search.">Search</string>
     <string name="card_browser_change_display_order_title">Choose display order</string>
     <string name="card_details_tags">Tags</string>
-    <string-array name="card_browser_order_labels">
-        <item>No sorting (faster)</item>
-        <item>By sort field</item>
-        <item>By created time</item>
-        <item>By note modification time</item>
-        <item>By card modification time</item>
-        <item>By due time</item>
-        <item>By interval</item>
-        <item>By ease</item>
-        <item>By reviews</item>
-        <item>By lapses</item>
-        <item>By deck name</item>
-    </string-array>
     <string name="manage_browser_column">Manage column</string>
     <string name="no_columns_available">No columns available</string>
     <string name="card_browser_select_all" maxLength="28">Select all</string>
@@ -110,4 +86,33 @@
     <!-- Search history -->
     <string name="card_browser_see_more">See more</string>
     <string name="card_browser_see_less">See less</string>
+
+    <!-- Sort Order -->
+    <string name="card_browser_order_no_sorting_title" comment="Title of the 'no sorting' row in the Choose Display Order bottom sheet">No sorting</string>
+    <string name="card_browser_order_no_sorting_subtitle" comment="Subtitle for the 'no sorting' row noting that no-sort is faster than sorted queries">Faster</string>
+    <string name="card_browser_order_snackbar_sort_by" comment="Snackbar shown after sort changes. %1$s is the column name (e.g. 'Card Type')">Sort by %1$s</string>
+
+    <string name="card_browser_order_subtitle_text_ascending" comment="Sort direction subtitle for text columns when ascending (A before Z)">A–Z</string>
+    <string name="card_browser_order_subtitle_text_descending" comment="Sort direction subtitle for text columns when descending (Z before A)">Z–A</string>
+    <string name="card_browser_order_subtitle_numeric_ascending" comment="Sort direction subtitle for numeric columns when ascending (smallest value first)">Low to high</string>
+    <string name="card_browser_order_subtitle_numeric_descending" comment="Sort direction subtitle for numeric columns when descending (largest value first)">High to low</string>
+    <string name="card_browser_order_subtitle_date_ascending" comment="Sort direction subtitle for date columns when ascending (oldest entry first)">Oldest first</string>
+    <string name="card_browser_order_subtitle_date_descending" comment="Sort direction subtitle for date columns when descending (newest entry first)">Newest first</string>
+
+    <!-- SortPill labels: a single character on each half hinting at the direction.
+         Translators: pick the first/last character of your locale's sort order. -->
+    <string name="sort_pill_label_text_ascending" comment="SortPill standard half marker for text columns. Use a 1-char glyph that suggests the start of the alphabet.">A</string>
+    <string name="sort_pill_label_text_descending" comment="SortPill reverse half marker for text columns. Use a 1-char glyph that suggests the end of the alphabet.">Z</string>
+    <string name="sort_pill_label_numeric_ascending" comment="SortPill standard half marker for numeric columns. Use a 1-char glyph that suggests the smallest value.">1</string>
+    <string name="sort_pill_label_numeric_descending" comment="SortPill reverse half marker for numeric columns. Use a 1-char glyph that suggests the largest value.">9</string>
+
+    <!-- SortPill accessibility descriptions, used by TalkBack. The host should prepend the
+         column name (e.g. "Front, ascending"); these strings are the direction half. -->
+    <string name="sort_pill_a11y_ascending" comment="SortPill accessibility: ascending half">Ascending</string>
+    <string name="sort_pill_a11y_descending" comment="SortPill accessibility: descending half">Descending</string>
+    <string name="sort_pill_a11y_selected" comment="SortPill accessibility: state announcement when this half is the active sort direction">Selected</string>
+
+    <string name="card_browser_order_section_unavailable" comment="Header: browser columns that cannot be sorted (e.g. Question)">Unavailable</string>
+    <string name="card_browser_order_subtitle_use_sort_field" comment="Fix for when the 'Question/Answer' column is not sortable.">Card content can\'t be sorted. Use Sort Field</string>
+    <string name="card_browser_order_subtitle_cards_mode_only" comment="Fix for trying to sort on FSRS columns in Notes mode">Only available in cards mode</string>
 </resources>

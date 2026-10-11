@@ -6,43 +6,22 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Navigation drawer strings -->
     <string name="drawer_open">يان تارتمىنى ئاچ</string>
@@ -54,7 +33,7 @@
     <string name="CardEditorModel">تۈرى:</string>
     <string name="CardEditorTags">بەلگە: %1$s</string>
     <string name="CardEditorCards">كارتا: %1$s</string>
-    <string name="edit_occlusions">Edit occlusions</string>
+    <string name="edit_occlusions">ئۆتكەل تەھرىر</string>
     <string name="paste_from_clipboard" maxLength="28">چاپلاش تاختىسىدىن كۆچۈر</string>
     <string name="add_new_filter_tags">بەلگە قوش/سۈزگۈچ</string>
     <string name="add_tag" maxLength="28">بەلگە قوش</string>
@@ -64,8 +43,8 @@
     <string name="updated_version">%s نەشرىگە يېڭىلاندى</string>
     <!-- Reviewer.kt (Study Screen) -->
     <string name="save_whiteboard" maxLength="28">ئاق دوسكىنى ساقلا</string>
-    <string name="enable_stylus" maxLength="28">قەلەمدە يېزىشنى قوزغىتىدۇ</string>
-    <string name="disable_stylus">قەلەمدە يېزىشنى چەكلەيدۇ</string>
+    <string name="enable_stylus" maxLength="28">قەلەمدە يېزىشنى قوزغات</string>
+    <string name="disable_stylus">قەلەمدە يېزىشنى چەكلە</string>
     <string name="eraser" maxLength="28">ئۆچۈرگۈچ</string>
     <string name="add_brush" maxLength="28">چوتكا قوش</string>
     <string name="whiteboard_align_left" comment="Option to align the whiteboard toolbar on the left" maxLength="28">سول</string>
@@ -77,8 +56,8 @@
     <string name="whiteboard_stroke_eraser" comment="Title of the whiteboard Stroke eraser">سىزىق توملۇقى</string>
     <string name="stylus_mode" comment="Title of the menu item that toggles the whiteboard stylus mode" maxLength="28">قەلەم ھالىتى</string>
     <string name="cannot_remove_last_brush_message">ئالدىنقى چوتكىنى چىقىرىۋېتەلمەيدۇ</string>
-    <string name="enable_whiteboard" maxLength="28">ئاق دوسكىنى قوزغىتىدۇ</string>
-    <string name="disable_whiteboard">ئاق دوسكىنى چەكلەيدۇ</string>
+    <string name="enable_whiteboard" maxLength="28">ئاق دوسكىنى قوزغات</string>
+    <string name="disable_whiteboard">ئاق دوسكىنى چەكلە</string>
     <string name="show_whiteboard">ئاق دوسكىنى كۆرسەت</string>
     <string name="enable_eraser" maxLength="28">ئۆچۈرگۈچنى قوزغات</string>
     <string name="disable_eraser" maxLength="28">ئۆچۈرگۈچنى چەكلە</string>
@@ -99,9 +78,9 @@
     <string name="slide_to_cancel" comment="Message shown when pressing the record button">سۈرۈلسە ۋاز كەچ</string>
     <string name="filter_by_flags" maxLength="41">بايراق</string>
     <!-- filtered deck options -->
-    <string name="filtered_option_delay_again">Delay for again</string>
-    <string name="filtered_option_delay_hard">Delay for hard</string>
-    <string name="filtered_option_delay_good">Delay for good</string>
+    <string name="filtered_option_delay_again">يەنە كېچىكتۈر</string>
+    <string name="filtered_option_delay_hard">تەسلىكتىن كېچىكتۈر</string>
+    <string name="filtered_option_delay_good">ياخشى كېچىكتۈر</string>
     <!-- Custom study options -->
     <string name="custom_study_loading_tags">بەلگە تىزىمى ھاسىللاۋاتىدۇ&#8230;</string>
     <!-- Study options -->
@@ -151,7 +130,6 @@
     <string name="preview_progress_bar_text" comment="What card we are on out of how many in card previewer progress bar">%1$d/%2$d</string>
     <string name="rename" comment="Confirm that the renaming action should be processed." maxLength="28">ئات ئۆزگەرت</string>
     <string name="checks_action" maxLength="28">تەكشۈر</string>
-    <string name="empty_cards" maxLength="28">بوش كارتا</string>
     <string name="unknown_type_field_warning">جاۋاب كىرگۈزۈلىدۇ: يوچۇن بۆلەك %s</string>
     <string name="delete_deck" comment="Message on a progress bar starting a deck is being deleted.">دەستە ئۆچۈرۈۋاتىدۇ&#8230;</string>
     <string name="info_rate">AnkiDroid كە باھا بېرىڭ</string>
@@ -175,7 +153,8 @@
     <string name="export_save_apkg_unsuccessful">Anki بولىقىنى ساقلىيالمىدى</string>
     <string name="export_share_title">Anki بولىقى يوللاش تاللىنىدۇ</string>
     <string name="export_email_subject">AnkiDroid چىقارغان كارتا: %s</string>
-    <string name="export_email_text"><![CDATA[        سالام!
+    <string name="export_email_text"><![CDATA[
+        سالام!
         <br/><br/>
         بۇ AnkiDroid[1] دىن ئەۋەتىلگەن Anki چاقماق كارتا دەستىسى.
         ئىشلەتكىلى بولىدىغان Anki تارقىتىلغان نەشرى[2]دىن بىرىنى ئىشلىتىپ ئېچىپ ئاسان ۋە ئۈنۈملۈك ئۆگىنىشتىن ھۇزۇرلىنىڭ! <br/><br/>
@@ -186,14 +165,14 @@
     <string name="export_choice_save_to">ساقلاش ئورنى</string>
     <string name="export_saving_exported_collection">چىقىرىدىغان ھۆججەتنى ساقلاۋاتىدۇ&#8230;</string>
     <string name="study_options" comment="Name for a preference category in Filtered deck (aka Cram deck, aka Custom study) options" maxLength="28">تاللانما</string>
-    <string name="menu__deck_options" maxLength="28">دەستە تاللانما</string>
     <string name="menu__study_options" comment="Menu item that opens options for a Filtered deck (aka Cram deck, aka Custom study)">ئۆگىنىش تاللانما</string>
     <string name="select_tts" maxLength="28">تېكىستتىن تىلغا تىل تەڭشىكى</string>
-    <string name="custom_study" maxLength="28">ئىختىيارى ئۆگىنىش</string>
     <string name="dyn_deck_desc">بۇ ئادەتتىكى كۈنتەرتىپنىڭ سىرتىدىكى مەزمۇننى ئۆگىنىدىغان ئالاھىدە دەستە. كارتىنى تەكرارلىغاندىن كېيىن ئەسلىدىكى دەستەسىگە قايتۇرۇلىدۇ. ئەگەر دەستە تىزىمىدىن بۇ دەستە ئۆچۈرۈلسە، قېپقالغان كارتا دەسلەپكى دەستە ئورنىغا ئەسلىگە قايتۇرۇلىدۇ.</string>
     <string name="tag_editor_add_feedback">«%2$s» نى چېكىپ «%1$s» نى قوشۇش  جەزملىنىدۇ</string>
     <string name="tag_editor_add_feedback_existing">مەۋجۇت «%1$s» بەلگە تاللاندى</string>
-    <string name="tag_already_exists">Tag already exists</string>
+    <string name="tag_already_exists">بەلگە مەۋجۇت</string>
+    <string name="error_name_exists">ئاتى مەۋجۇد</string>
+    <string name="warning_find_and_replace">بۇ تاللانمىنى ئىشلىتىشتىن ئىلگىرى دەستە تاللىغۇچتىكى توپلامنى زاپاسلاشنى ئويلىشىڭ!</string>
     <!-- Time spans -->
     <!-- Currently only used if exporting APKG fails -->
     <string name="apk_share_error">apkg ھۆججەتنى ھەمبەھىرلەش خاتالىقى</string>
@@ -205,19 +184,17 @@
     <!-- The name of the deck which corrupt cards will be moved to -->
     <!-- Deckpicker Background -->
     <string name="background_image_title" maxLength="41">تەگلىك</string>
-    <string name="choose_an_image" maxLength="41">سۈرەت تاللاش</string>
     <string name="remove_wallpaper_image" maxLength="41">تەگلىكنى چىقىرىۋەت</string>
-    <string name="remove_background_image">Are you sure you wish to remove the background?</string>
+    <string name="remove_background_image">تەگلىكنى راستتىنلا چىقىرىۋېتەمسىز؟</string>
     <!-- Card Template Browser Appearance -->
-    <string name="restore_default" maxLength="28">Restore default</string>
-    <string name="reviewer_tts_cloze_spoken_replacement">بوش</string>
+    <string name="restore_default" maxLength="28">كۆڭۈلدىكىگە قايتۇر</string>
     <!-- Whiteboard eraser mode toggle message in Reviewer -->
     <string name="white_board_eraser_enabled">ئۆچۈرگۈچ ھالىتى قوزغىتىلدى</string>
     <string name="white_board_eraser_disabled">ئۆچۈرگۈچ ھالىتى توختىتىلدى</string>
     <string comment="Progress amount e.g. \'28 MB/141 MB\'. %1$s is the current amount, %2$s is the max." name="progress_amount_bytes">%1$s/%2$s</string>
-    <string name="media_file_size_warning_title">Media too large</string>
-    <string name="media_file_size_warning_message" comment="1$s: File name, 2$s: File size, 3$s: The size limit (e.g. 100MB)">The file \"%1$s\" (%2$s) exceeds the AnkiWeb limit of %3$s and cannot be synced. Add anyway?</string>
-    <string name="media_file_size_add_anyway">Add anyway</string>
+    <string name="media_file_size_warning_title">ۋاسىتە بەك چوڭ</string>
+    <string name="media_file_size_warning_message" comment="1$s: File name, 2$s: File size, 3$s: The size limit (e.g. 100MB)">«%1$s» (%2$s) ھۆججىتى AnkiWeb نىڭ چېكى %3$s نى ئاشۇرۇۋەتتى قەدەمداشلىيالمايدۇ. قوشۇۋېرەمدۇ؟</string>
+    <string name="media_file_size_add_anyway">قوشۇۋەر.</string>
     <!-- Whiteboard save image message in the Study Screen -->
     <string name="white_board_image_save_failed">ئاق دوسكا سۈرىتىنى ساقلىيالمىدى %s</string>
     <string name="white_board_image_saved">ئاق دوسكا سۈرىتى %s غا ساقلاندى</string>
@@ -243,33 +220,33 @@
     <!-- A Menu item to change the Font Size (currently in the Note Editor) -->
     <string name="menu_font_size" maxLength="28">خەت چوڭلۇقى</string>
     <string name="menu_show_toolbar" comment="Checkable item stating whether the note editor toolbar should be shown" maxLength="28">قورال بالداقنى كۆرسەت</string>
-    <string name="format_insert_bold">Format as bold</string>
-    <string name="format_insert_italic">Format as italic</string>
-    <string name="format_insert_underline">Format as underline</string>
-    <string name="insert_horizontal_line">Insert horizontal line</string>
-    <string name="insert_heading">Insert heading</string>
-    <string name="format_font_size">Change font size</string>
-    <string name="insert_mathjax">Insert MathJax equation</string>
+    <string name="format_insert_bold">توم پىچىم</string>
+    <string name="format_insert_italic">يانتۇ پىچىم</string>
+    <string name="format_insert_underline">ئاستى سىزىق پىچىم</string>
+    <string name="insert_horizontal_line">توغرىسىغا سىزىق قىستۇر</string>
+    <string name="insert_heading">ماۋزۇ قىستۇر</string>
+    <string name="format_font_size">خەت چوڭلۇقى ئۆزگەرت</string>
+    <string name="insert_mathjax">MathJax تەڭلىمىسى قىستۇر</string>
     <string name="note_editor_toolbar_icon">توپچە تېكىستى</string>
-    <string name="before_text">HTML before selection</string>
-    <string name="after_text">HTML after selection</string>
-    <string name="add_toolbar_item">Create toolbar item</string>
-    <string name="edit_toolbar_item">Edit toolbar item</string>
+    <string name="before_text">تاللاشتىن ئىلگىرىكى HTML</string>
+    <string name="after_text">تاللاشتىن كېيىنكى HTML</string>
+    <string name="add_toolbar_item">قورال بالداق تۈرى قۇر</string>
+    <string name="edit_toolbar_item">قورال بالداق تۈرىنى تەھرىر</string>
     <string name="toolbar_item_explain_edit_or_remove">تاللانغان تېكىستتىن ئىلگىرى ۋە كېيىن قىستۇرىدىغان HTML كىرگۈزۈلىدۇ\n\nقورال بالداق ئۇزۇن بېسىلسا ئۇنى تەھرىرلىگىلى ياكى چىقىرىۋەتكىلى بولىدۇ</string>
-    <string name="remove_toolbar_item">Remove toolbar item?</string>
+    <string name="remove_toolbar_item">قورال بالداق تۈرىنى چىقىرىۋېتەمدۇ؟</string>
     <string name="note_editor_image_too_large">سۈرەت بەك چوڭ، سۈرەتنى قولدا قىستۇرۇڭ</string>
     <string name="note_editor_video_too_large">سىن ھۆججىتى بەك چوڭ، سىننى قولدا قىستۇرۇڭ</string>
     <string name="note_editor_audio_too_large">ئۈن ھۆججىتى بەك چوڭ، ئۈننى قولدا قىستۇرۇڭ</string>
     <string name="ankidroid_cannot_open_after_backup_try_again" comment="After an Android backup is restored, AnkiDroid opens and shows this message.         Opening AnkiDroid again will work correctly">Android زاپاسلاش ئىجرا قىلىنىۋاتىدۇ. قايتا سىناڭ</string>
     <string name="create_shortcut_error_vivo" comment="iManager is an app on Vivo phones">iManager نى ئىشلىتىپ AnkiDroid نىڭ تېزلەتمە قوشۇشىغا يول قويۇڭ</string>
-    <string name="create_shortcut_error_miui" comment="Keep the message as short, as this is shown in a toast. %s is the app name: \'AnkiDroid\'">Allow ‘Home screen shortcuts’ in system settings for %s to add shortcuts</string>
+    <string name="create_shortcut_error_miui" comment="Keep the message as short, as this is shown in a toast. %s is the app name: \'AnkiDroid\'">سىستېما تەڭشىكىدە %s نىڭ تېزلەتمە قوشۇشى ئۈچۈن «باش ئېكران تېزلەتمىسى» گە يول قويىدۇ</string>
     <string name="create_shortcut_failed" comment="home screen == launcher">باش ئېكرانىڭىز AnkiDroid نىڭ تېزلەتمە قوشۇشىغا يول قويمايدۇ</string>
     <string name="create_shortcut_error">تېزلەتمە قوشۇش خاتالىقى: %s</string>
     <string name="note_editor_capitalize" comment="This is for a switch with a checkbox - on: enabled" maxLength="28">چوڭ ھەرپلىك جۈملە</string>
     <string name="menu_scroll_toolbar" comment="Checkbox stating whether note editor toolbar is scrollable or stacked. Checked: Scroll" maxLength="28">قورال بالداقنى دومىلات</string>
     <!-- Dialog hints -->
     <string name="dialog_hint_url">URL</string>
-    <string name="dialog_hint_certificate">Certificate</string>
+    <string name="dialog_hint_certificate">گۇۋاھنامە</string>
     <!-- IncrementNumberRangePreference -->
     <string name="plus_sign" comment="Label for increment button in IncrementerNumberRangePreference">+</string>
     <string name="minus_sign" comment="Label for decrement button in IncrementerNumberRangePreference">-</string>
@@ -279,7 +256,7 @@
     <!-- Used for credential empty warning message -->
     <string name="invalid_email">ئىناۋەتلىك ئېلخەت ئادرېسى كىرگۈزۈلىدۇ</string>
     <string name="password_empty">ئىم زۆرۈر</string>
-    <string name="back_pressed_once">Go back again to exit</string>
+    <string name="back_pressed_once">قايت يەنە چېكىلسە چېكىنىدۇ</string>
     <!-- %% is required to display % symbol. Reference: https://stackoverflow.com/a/16834358 -->
     <string name="percentage">%s%%</string>
     <string name="download_deck">دەستە چۈشۈر</string>
@@ -337,9 +314,7 @@
     <!-- Browser Options Dialog -->
     <string name="show_cards" comment="Label for toggle cards button in BrowserOptionsDialog">كارتا</string>
     <string name="show_notes" comment="Label for toggle notes button in BrowserOptionsDialog">خاتىرە</string>
-    <string name="toggle_cards_notes">Toggle cards/notes</string>
     <string name="truncate_content_help">توركۆرگۈ قۇر ئېگىزلىكىنى قىسقارتىپ پەقەت ئالدىنقى 3 قۇردىكى مەزمۇننىلا كۆرسىتىدۇ</string>
-    <string name="browser_options_dialog_heading">توركۆرگۈ تاللانما</string>
     <string name="audio_saved">خاتىرە ساقلاندى</string>
     <string name="deleting_selected_notes">تاللانغان خاتىرىنى ئۆچۈرۈۋاتىدۇ</string>
     <string name="tts_voices_default_text" comment="The default text to speak when selecting     Text to speech voices">ئاۋاز چېكىلسە ئاڭلىنىدۇ</string>
@@ -353,7 +328,7 @@
     <string name="shared_decks_login_required">تېخىمۇ كۆپ دەستە چۈشۈرۈش ئۈچۈن تىزىمغا كىرىڭ</string>
     <string name="deck_description_field_hint">چۈشەندۈرۈش</string>
     <string name="deck_description_saved">چۈشەندۈرۈش يېڭىلاندى</string>
-    <string name="format_deck_description_as_markdown">Format as markdown</string>
+    <string name="format_deck_description_as_markdown">Markdown سۈپىتىدە پىچىملاندۇرىدۇ</string>
     <string name="help_button_content_description">«%s» نىڭ ياردىمىنى ئاچىدۇ</string>
     <string name="failed_to_copy">كۆچۈرەلمىدى</string>
     <plurals name="unbury_cards_feedback">
@@ -368,14 +343,13 @@
     <string name="play_recording">قوي</string>
     <string name="next_recording" comment="Description of a button to go to the next recording">كېيىنكى</string>
     <!--  AlertDialog in the deleteCardTemplate  -->
-    <string name="orphan_note_title">Cannot delete card type</string>
+    <string name="orphan_note_title">كارتا تۈرىنى ئۆچۈرەلمەيدۇ</string>
     <string name="orphan_note_message">بۇ كارتا تۈرى ئۆچۈرۈلسە بەزى كارتىسىز خاتىرە قېپقالىدۇ.</string>
     <string name="voice_not_supported">ئاۋازنى قوللىمايدۇ. باشقا بىرىنى سىناڭ ياكى ئاۋاز موتورىدىن بىرنى ئورنىتىڭ.</string>
     <!--Keyboard shortcuts dialog-->
     <string name="deck_picker_group" comment="Label for the group of shortcuts related to the deck picker">دەستە تاللىغۇچ</string>
     <string name="delete_deck_without_confirmation" comment="Description of the shortcut that deletes the deck without asking for confirmation">دەستىنى سورىمايلا ئۆچۈرىدۇ</string>
     <string name="note_editor_group" comment="Label for the group of shortcuts related to the note editor">خاتىرە تەھرىرلىگۈچ</string>
-    <string name="select_deck" comment="Description of the shortcut that opens the deck selection dialog">دەستە تاللىنىدۇ</string>
     <string name="select_note_type" comment="Description of the shortcut that shows the note selection spinner">خاتىرە تۈرى تاللىنىدۇ</string>
     <string name="tag_editor" comment="Description of the shortcut that opens the tags dialog">بەلگە تەھرىرلىگۈچ</string>
     <string name="card_template_editor_group" comment="Label for the group of shortcuts related to the card template editor">كارتا قېلىپ تەھرىرلىگۈچ</string>
@@ -391,8 +365,12 @@
     <string name="scheduler_upgrade_required_dialog_title" comment="Shown in a dialog when user has imported a collection using a very old version of the Anki spaced repetition scheduler">كۈنتەرتىپلىگۈچنى يېڭىلاش زۆرۈر</string>
     <!-- Whitespace is OK -->
     <string name="list_separator" comment="The character and spacing to display between elements of a list, for example \', \' in \'Apple, Banana, Cherry" tools:ignore="TranslationTypo">، </string>
-    <!-- Other errors -->
-    <!-- Similar to TR.qtMiscNameExists(): "Name exists." -->
-    <string name="error_name_exists">Name already exists</string>
-    <string comment="Shown when retrying a running action" name="already_in_progress">Already in progress</string>
+    <!--Set up date-->
+    <string name="set_due_date_day" comment="Used for setting due date">كۈن</string>
+    <string name="set_due_date_date_range">چېسلا دائىرىسى</string>
+    <string comment="Shown when retrying a running action" name="already_in_progress">ئىجرا قىلىنىۋاتىدۇ</string>
+    <!-- Switch profiles screen -->
+    <string name="switch_profile" maxLength="41" comment="Title of the screen where the user switches between profiles">تەرجىمىھال ئالماشتۇر</string>
+    <string name="edit_profile" comment="Content description of the button that edits a profile in the profile list">تەرجىمىھال تەھرىر</string>
+    <string name="delete_profile" comment="Content description of the button that deletes a profile in the profile list">تەرجىمىھال ئۆچۈر</string>
 </resources>

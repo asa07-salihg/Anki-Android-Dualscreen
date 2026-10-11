@@ -6,43 +6,22 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- generic strings -->
     <string name="disabled">ਅਯੋਗ</string>
@@ -61,7 +40,6 @@
     <string name="pref_cat_sync" comment="title of the sync preferences category" maxLength="41">ਸਿੰਕ</string>
     <string name="pref_cat_scheduling" maxLength="41">ਅਨੁਸੂਚੀ</string>
     <string name="pref_cat_whiteboard" maxLength="41">ਵ੍ਹਾਈਟਬੋਰਡ</string>
-    <string name="pref_cat_appearance" maxLength="41">ਦਿੱਖ</string>
     <string name="pref_cat_themes" maxLength="41">ਥੀਮ</string>
     <string name="pref_cat_gestures" maxLength="41">ਸੰਕੇਤ</string>
     <string name="pref_cat_controls" maxLength="41">ਕੰਟਰੋਲ</string>
@@ -69,6 +47,15 @@
     <string name="pref_cat_workarounds" maxLength="41">ਕੰਮਕਾਜ</string>
     <string name="pref_cat_plugins" maxLength="41">ਪਲੱਗਇਨ</string>
     <string name="pref_cat_editing" maxLength="41">Editing</string>
+    <string name="pref_cat_security" maxLength="41">Security</string>
+    <!-- Card template JavaScript API permissions -->
+    <string name="allow_dangerous_js_api_title" maxLength="41">Globally allow dangerous JavaScript APIs</string>
+    <string name="allow_dangerous_js_api_summ">Allows any card or template to read and modify other cards, or your Anki collection data.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="dangerous_js_api_denied_snackbar">Security: Unsafe JavaScript call blocked.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
+    <!-- External-app launching from card content (intent: / android-app: URLs) -->
+    <string name="allow_card_external_launch_title" maxLength="41">Allow cards to launch other apps</string>
+    <string name="allow_card_external_launch_summ">Cards can open other apps on your device, triggering potentially unwanted actions.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="card_external_launch_denied_snackbar">Security: Card blocked from launching another app.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
     <!-- preferences.xml entries-->
     <string name="whiteboard_stroke_width" maxLength="41">ਸਟ੍ਰੋਕ ਚੌੜਾਈ</string>
     <string name="use_input_tag" maxLength="41">ਕਾਰਡ ਵਿੱਚ ਜਵਾਬ ਟਾਈਪ ਕਰੋ</string>
@@ -129,7 +116,6 @@
     <string name="tts_summ">ਸਵਾਲ-ਜਵਾਬ ਪੜ੍ਹਦਾ ਹੈ ਜੇਕਰ ਕੋਈ ਸਾਊਂਡ ਫਾਈਲ ਸ਼ਾਮਲ ਨਹੀਂ ਹੈ</string>
     <!-- Sync -->
     <string name="sync_fetch_missing_media" maxLength="41">ਸਮਕਾਲੀਕਰਨ \'ਤੇ ਮੀਡੀਆ ਪ੍ਰਾਪਤ ਕਰੋ</string>
-    <string name="sync_account" maxLength="41">AnkiWeb ਖਾਤਾ</string>
     <string name="sync_account_summ_logged_out">ਲੌਗ ਇਨ ਨਹੀਂ ਕੀਤਾ</string>
     <string name="automatic_sync_choice" maxLength="41">ਆਟੋਮੈਟਿਕ ਸਿੰਕ੍ਰੋਨਾਈਜ਼ੇਸ਼ਨ</string>
     <string name="automatic_sync_choice_summ">ਐਪ ਸਟਾਰਟ/ਐਗਜ਼ਿਟ \'ਤੇ ਆਪਣੇ ਆਪ ਸਿੰਕ ਕਰੋ ਜੇਕਰ ਆਖਰੀ ਸਮਕਾਲੀਕਰਨ 10 ਤੋਂ ਵੱਧ ਸੀ
@@ -158,11 +144,9 @@
     <string name="select_locale_title">ਭਾਸ਼ਾ ਚੁਣੋ</string>
     <string name="software_render" maxLength="41">ਕਾਰਡ ਹਾਰਡਵੇਅਰ ਰੈਂਡਰ ਨੂੰ ਅਸਮਰੱਥ ਬਣਾਓ</string>
     <string name="software_render_summ">ਹਾਰਡਵੇਅਰ ਰੈਂਡਰ ਤੇਜ਼ ਹੈ ਪਰ ਸਮੱਸਿਆ ਹੋ ਸਕਦੀ ਹੈ, ਖਾਸ ਕਰਕੇ Android 8/8.1 \'ਤੇ। ਜੇਕਰ ਤੁਸੀਂ ਕਾਰਡ ਸਮੀਖਿਆ ਯੂਜ਼ਰ ਇੰਟਰਫੇਸ ਦੇ ਹਿੱਸੇ ਨਹੀਂ ਦੇਖ ਸਕਦੇ, ਤਾਂ ਇਸ ਸੈਟਿੰਗ ਨੂੰ ਅਜ਼ਮਾਓ।</string>
-    <string name="safe_display" maxLength="41">ਸੁਰੱਖਿਅਤ ਡਿਸਪਲੇ ਮੋਡ</string>
-    <string name="safe_display_summ">ਸਾਰੇ ਐਨੀਮੇਸ਼ਨਾਂ ਨੂੰ ਅਸਮਰੱਥ ਬਣਾਓ ਅਤੇ ਕਾਰਡ ਬਣਾਉਣ ਲਈ ਸੁਰੱਖਿਅਤ ਮੋਡ ਦੀ ਵਰਤੋਂ ਕਰੋ। ਈ-ਸਿਆਹੀ ਡਿਵਾਈਸਾਂ ਨੂੰ ਇਸਦੀ ਲੋੜ ਹੋ ਸਕਦੀ ਹੈ।</string>
-    <string name="disable_extended_text_ui" maxLength="41">ਸਿੰਗਲ-ਫੀਲਡ ਸੰਪਾਦਨ ਮੋਡ ਨੂੰ ਅਸਮਰੱਥ ਬਣਾਓ</string>
+    <string name="disable_extended_text_ui" maxLength="41">Disable single-field edit mode</string>
     <!--See: multimedia_editor_popup_cloze. We can\'t use format strings as this is auto-generated-->
-    <string name="disable_extended_text_ui_summ">ਲੈਂਡਸਕੇਪ ਮੋਡ ਵਿੱਚ ਹੋਣ \'ਤੇ \'ਕਲੋਜ਼ ਡਿਲੀਸ਼ਨ\' ਸੰਦਰਭ ਮੀਨੂ ਦੀ ਆਗਿਆ ਦਿੰਦਾ ਹੈ।</string>
+    <string name="disable_extended_text_ui_summ">Allows \'Cloze deletion\' context menu when in landscape mode.</string>
     <string name="vertical_centering" maxLength="41">ਕੇਂਦਰ ਇਕਸਾਰ</string>
     <string name="vertical_centering_summ">ਕਾਰਡਾਂ ਦੀ ਸਮੱਗਰੀ ਨੂੰ ਖੜ੍ਹਵੇਂ ਤੌਰ \'ਤੇ ਕੇਂਦਰਿਤ ਕਰੋ</string>
     <string name="pref_double_tap_time_interval" maxLength="41">ਡਬਲ ਟੈਪ ਟਾਈਮ ਅੰਤਰਾਲ</string>
@@ -173,6 +157,8 @@
     <string name="show_estimates_summ">ਜਵਾਬ ਬਟਨਾਂ \'ਤੇ ਅਗਲੀ ਸਮੀਖਿਆ ਸਮਾਂ ਦਿਖਾਓ</string>
     <string name="show_large_answer_buttons" maxLength="41">ਵੱਡੇ ਜਵਾਬ ਬਟਨ ਦਿਖਾਓ</string>
     <string name="show_large_answer_buttons_summ">Show answer button in 2 rows</string>
+    <string name="remove_animations" maxLength="41">Remove animations</string>
+    <string name="remove_animations_summary">Also enabled if animations are removed on the system settings</string>
     <string name="show_top_bar" maxLength="41">ਸਿਖਰ ਪੱਟੀ ਦਿਖਾਓ</string>
     <string name="show_top_bar_summary">ਸਿਖਰ ਪੱਟੀ ਵਿੱਚ ਕਾਰਡ ਗਿਣਤੀ, ਉੱਤਰ ਟਾਈਮਰ, ਝੰਡਾ ਅਤੇ ਨਿਸ਼ਾਨ ਦਿਖਾਓ</string>
     <string name="show_progress" maxLength="41">ਬਾਕੀ ਦਿਖਾਓ</string>
@@ -208,8 +194,6 @@
     <string name="pref_cat_reviewer" maxLength="41">Study Screen</string>
     <string name="show_deck_title" maxLength="41">ਡੇਕ ਸਿਰਲੇਖ ਦਿਖਾਓ</string>
     <string name="accessibility" maxLength="41">ਪਹੁੰਚਯੋਗਤਾ</string>
-    <!-- Paste clipboard image as png option -->
-    <string name="paste_as_png" maxLength="41">ਕਲਿੱਪਬੋਰਡ ਚਿੱਤਰਾਂ ਨੂੰ PNG ਵਜੋਂ ਪੇਸਟ ਕਰੋ</string>
     <string name="exit_via_double_tap_back" maxLength="41">ਵਾਪਸ ਜਾਣ/ਬਾਹਰ ਜਾਣ ਲਈ ਦੋ ਵਾਰ ਵਾਪਸ ਦਬਾਓ</string>
     <string name="exit_via_double_tap_back_summ">To avoid accidentally leaving the study screen or the app</string>
     <!-- Allow all files in media imports -->
@@ -248,7 +232,7 @@
     <string name="analytics_title" maxLength="41">ਵਿਸ਼ੇਸ਼ਤਾ ਦੀ ਵਰਤੋਂ ਸਾਂਝੀ ਕਰੋ</string>
     <string name="analytics_summ">ਤੁਸੀਂ ਵਿਕਾਸ ਟੀਮ ਦੀ ਇਹ ਦੇਖਣ ਵਿੱਚ ਮਦਦ ਕਰਕੇ AnkiDroid ਵਿੱਚ ਯੋਗਦਾਨ ਪਾ ਸਕਦੇ ਹੋ ਕਿ ਲੋਕ ਕਿਹੜੀਆਂ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹਨ</string>
     <string name="note_editor_replace_newlines" maxLength="41">ਨਵੀਆਂ ਲਾਈਨਾਂ ਨੂੰ HTML ਨਾਲ ਬਦਲੋ</string>
-    <string name="note_editor_replace_newlines_summ">ਨੋਟ ਐਡੀਟਰ ਵਿੱਚ, &lt;br&gt; ਇੱਕ ਕਾਰਡ ਨੂੰ ਸੰਪਾਦਿਤ ਕਰਦੇ ਸਮੇਂ ਨਵੀਆਂ ਲਾਈਨਾਂ ਵਿੱਚ.</string>
+    <string name="note_editor_replace_newlines_summ">In the note editor, convert any instances of &lt;br&gt; to newlines when editing a card.</string>
     <string name="type_in_answer_focus" maxLength="41">ਫੋਕਸ \'ਜਵਾਬ ਟਾਈਪ ਕਰੋ\'</string>
     <string name="type_in_answer_focus_summ">Automatically focus the ‘type in answer’ field in the study screen</string>
     <!-- About -->
@@ -278,6 +262,10 @@
     <string name="user_action_8" maxLength="28">ਉਪਭੋਗਤਾ ਕਾਰਵਾਈ 8</string>
     <string name="user_action_9" maxLength="28">ਉਪਭੋਗਤਾ ਕਾਰਵਾਈ 9</string>
     <string name="toggle_auto_advance" maxLength="28">ਆਟੋ ਐਡਵਾਂਸ ਟੌਗਲ ਕਰੋ</string>
+    <string name="enable_auto_advance" maxLength="28">Enable auto advance</string>
+    <string name="disable_auto_advance" maxLength="28">Disable auto advance</string>
+    <string name="enable_voice_recording" maxLength="28">Enable voice recording</string>
+    <string name="disable_voice_recording" maxLength="28">Disable voice recording</string>
     <!-- Select card side -->
     <string name="card_side_selection_title">ਕਾਰਡ ਸਾਈਡ ਚੁਣੋ</string>
     <string name="card_side_question">ਸਵਾਲ</string>
@@ -292,6 +280,8 @@
     <string name="pref_cat_experimental" maxLength="41" tools:ignore="UnusedResources">ਪ੍ਰਯੋਗਾਤਮਕ</string>
     <string name="readtext_deprecation_warn">AnkiDroid ਨੇ ਇੱਕ ਸੁਧਾਰੀ ਹੋਈ TTS ਵਿਧੀ ਪੇਸ਼ ਕੀਤੀ ਹੈ ਜੋ ਦੂਜੇ Anki ਕਲਾਇੰਟਸ ਦੇ ਅਨੁਕੂਲ ਹੈ ਅਤੇ ਇਸ ਵਿੱਚ ਭਾਸ਼ਾ ਦੇ ਪਲੇਬੈਕ ਲਈ ਹੋਰ ਆਵਾਜ਼ਾਂ ਅਤੇ ਸੁਧਾਰ ਸ਼ਾਮਲ ਹਨ!\n\nਕਿਰਪਾ ਕਰਕੇ ਜਿੰਨੀ ਜਲਦੀ ਹੋ ਸਕੇ ਅੱਪਗ੍ਰੇਡ ਕਰੋ, ਕਿਉਂਕਿ ਇਹ ਸੈਟਿੰਗ ਜਲਦੀ ਹੀ ਹਟਾ ਦਿੱਤੀ ਜਾਵੇਗੀ। .</string>
     <string name="readtext_reviewer_warn" tools:ignore="UnusedResources">ਕਿਰਪਾ ਕਰਕੇ ਨਵੇਂ ਟੈਕਸਟ ਟੂ ਸਪੀਚ ਫਾਰਮੈਟ ਵਿੱਚ ਅੱਪਗ੍ਰੇਡ ਕਰੋ</string>
+    <string name="allow_templates_to_record_audio" maxLength="41">Allow templates to record audio</string>
+    <string name="template_is_trying_to_record_audio">This template is trying to record audio</string>
     <string name="pref_fixed_port_title" maxLength="41">localStorage in Study Screen</string>
     <string name="pref_fixed_port_summary">Enables JavaScript localStorage by using a fixed server port in the Study Screen</string>
     <!-- Developer options -->

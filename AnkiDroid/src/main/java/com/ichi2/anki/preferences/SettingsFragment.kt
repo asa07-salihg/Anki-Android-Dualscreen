@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2022 Brayan Oliveira <brayandso.dev@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.preferences
 
 import android.content.SharedPreferences
@@ -22,13 +9,19 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.VisibleForTesting
 import androidx.annotation.XmlRes
-import androidx.core.os.bundleOf
+import androidx.core.view.ViewCompat
+import androidx.core.view.ViewGroupCompat
+import androidx.core.view.WindowInsetsCompat.Type.displayCutout
+import androidx.core.view.WindowInsetsCompat.Type.ime
+import androidx.core.view.WindowInsetsCompat.Type.systemBars
+import androidx.core.view.updatePadding
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceManager.OnPreferenceTreeClickListener
-import com.ichi2.anki.analytics.AnalyticsConstants
-import com.ichi2.anki.analytics.UsageAnalytics
+import com.ichi2.anki.analytics.AnkiDroidUsageAnalytics
+import com.ichi2.anki.common.analytics.Analytics
+import com.ichi2.anki.common.analytics.AnalyticsEvent
 import com.ichi2.anki.databinding.FragmentSettingsBinding
 import com.ichi2.preferences.DialogFragmentProvider
 import dev.androidbroadcast.vbpd.viewBinding
@@ -49,11 +42,7 @@ abstract class SettingsFragment :
     abstract fun initSubscreen()
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
-        UsageAnalytics.sendAnalyticsEvent(
-            category = AnalyticsConstants.Category.SETTING,
-            action = AnalyticsConstants.Actions.TAPPED_SETTING,
-            label = preference.key,
-        )
+        Analytics.send(AnalyticsEvent.SettingTapped(preference.key))
         return super.onPreferenceTreeClick(preference)
     }
 
@@ -61,17 +50,12 @@ abstract class SettingsFragment :
         sharedPreferences: SharedPreferences,
         key: String?,
     ) {
-        if (key !in UsageAnalytics.preferencesWhoseChangesShouldBeReported) {
+        if (key !in AnkiDroidUsageAnalytics.reportablePreferences) {
             return
         }
         if (key != null) {
             val valueToReport = getPreferenceReportableValue(sharedPreferences.get(key))
-            UsageAnalytics.sendAnalyticsEvent(
-                category = AnalyticsConstants.Category.SETTING,
-                action = AnalyticsConstants.Actions.CHANGED_SETTING,
-                value = valueToReport,
-                label = key,
-            )
+            Analytics.send(AnalyticsEvent.SettingChanged(key, valueToReport))
         }
     }
 
@@ -96,13 +80,25 @@ abstract class SettingsFragment :
             setTitle(title)
             setNavigationOnClickListener { requireActivity().onBackPressedDispatcher.onBackPressed() }
         }
+
+        ViewGroupCompat.installCompatInsetsDispatch(binding.root)
+        ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets ->
+            val bars = insets.getInsets(systemBars() or displayCutout() or ime())
+            view.updatePadding(
+                left = bars.left,
+                right = bars.right,
+            )
+            binding.appbar.updatePadding(top = bars.top)
+            listView.updatePadding(bottom = bars.bottom)
+            insets
+        }
     }
 
     override fun onCreatePreferences(
         savedInstanceState: Bundle?,
         rootKey: String?,
     ) {
-        UsageAnalytics.sendAnalyticsScreenView(analyticsScreenNameConstant)
+        Analytics.sendAnalyticsScreenView(analyticsScreenNameConstant)
         addPreferencesFromResource(preferenceResource)
         initSubscreen()
     }
@@ -118,7 +114,7 @@ abstract class SettingsFragment :
             (preference as? DialogFragmentProvider)?.makeDialogFragment()
                 ?: return super.onDisplayPreferenceDialog(preference)
         Timber.d("displaying custom preference: ${dialogFragment::class.simpleName}")
-        dialogFragment.arguments = bundleOf(PREF_DIALOG_KEY to preference.key)
+        dialogFragment.arguments = Bundle().apply { putString(PREF_DIALOG_KEY, preference.key) }
         dialogFragment.setTargetFragment(this, 0)
         dialogFragment.show(parentFragmentManager, "androidx.preference.PreferenceFragment.DIALOG")
     }
@@ -143,7 +139,7 @@ abstract class SettingsFragment :
         /**
          * Converts a preference value to a numeric number that
          * can be reported to analytics, since analytics events only accept
-         * [Int] as value ([UsageAnalytics.sendAnalyticsEvent]),
+         * [Int] as value ([AnalyticsEvent.SettingChanged]),
          * or null if it can't be converted.
          *
          * Boolean preferences will return 1 if true and 0 if false

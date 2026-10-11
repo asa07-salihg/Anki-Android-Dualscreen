@@ -1,24 +1,32 @@
-/*
- *  Copyright (c) 2024 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.common.utils.android
 
+import android.content.Context
 import android.graphics.Color
 import androidx.annotation.ColorInt
+import com.google.android.material.color.MaterialColors
 import com.ichi2.anki.common.utils.ext.clamp
+
+@ColorInt
+fun getColorFromAttr(
+    context: Context,
+    attr: Int,
+): Int = MaterialColors.getColor(context, attr, 0)
+
+/**
+ * NOTE: dangerous function, it mutates the input array and returns it!
+ */
+@ColorInt
+fun getColorsFromAttrs(
+    context: Context,
+    attrs: IntArray,
+): IntArray {
+    for (i in attrs.indices) {
+        attrs[i] = getColorFromAttr(context, attrs[i])
+    }
+    return attrs
+}
 
 /**
  * Darkens the provided ARGB color by a provided [factor]

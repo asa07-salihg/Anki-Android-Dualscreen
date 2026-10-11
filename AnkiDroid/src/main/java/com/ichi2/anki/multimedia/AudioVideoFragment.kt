@@ -64,12 +64,11 @@ class AudioVideoFragment : MultimediaFragment(R.layout.fragment_audio_video) {
      */
     private val pickMediaLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (view == null) return@registerForActivityResult
             when {
                 result.resultCode != Activity.RESULT_OK || result.data == null -> {
                     Timber.d("Uri is empty or Result not OK")
-                    if (viewModel.currentMultimediaUri.value == null) {
-                        setMultimediaResultAndFinish(MultimediaResult.Cancelled(indexValue))
-                    }
+                    cancelIfEmpty()
                 }
                 else -> {
                     executeSafe(requireContext(), "pickMediaLauncher:unhandled") {
@@ -192,9 +191,7 @@ class AudioVideoFragment : MultimediaFragment(R.layout.fragment_audio_video) {
                 Timber.d("Audio or Video length is not valid")
                 return@setOnClickListener
             }
-            field.mediaFile = viewModel.currentMultimediaPath.value
-            field.hasTemporaryMedia = true
-            setMultimediaResultAndFinish(MultimediaResult.Success(indexValue, field))
+            finishWithMedia()
         }
     }
 
@@ -370,13 +367,13 @@ class AudioVideoFragment : MultimediaFragment(R.layout.fragment_audio_video) {
     override fun onDestroyView() {
         super.onDestroyView()
         Timber.d("Releasing media player")
-        mediaPlayer.release()
+        if (::mediaPlayer.isInitialized) mediaPlayer.release()
     }
 
     override fun onStop() {
         super.onStop()
         Timber.d("Stopping media player")
-        mediaPlayer.playWhenReady = false
+        if (::mediaPlayer.isInitialized) mediaPlayer.playWhenReady = false
     }
 
     companion object {

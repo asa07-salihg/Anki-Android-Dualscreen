@@ -1,18 +1,5 @@
-/*
- Copyright (c) 2020 David Allison <davidallisongithub@gmail.com>
+// SPDX-License-Identifier: GPL-3.0-or-later
 
- This program is free software; you can redistribute it and/or modify it under
- the terms of the GNU General Public License as published by the Free Software
- Foundation; either version 3 of the License, or (at your option) any later
- version.
-
- This program is distributed in the hope that it will be useful, but WITHOUT ANY
- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- PARTICULAR PURPOSE. See the GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License along with
- this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 package com.ichi2.compat.customtabs
 
 import android.app.Activity
@@ -33,6 +20,7 @@ import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
@@ -79,6 +67,31 @@ class CustomTabActivityHelperTest {
         verify(fallback, times(1)).openUri(any(), any())
     }
 
+    @Test
+    fun ensureClientThrowingNullPointerExceptionFromWarmupDoesNotCrash() {
+        val badClient = getClientThrowing(NullPointerException("Attempt to get length of null array"))
+        val customTabActivityHelper = getValidTabHandler()
+
+        customTabActivityHelper.onServiceConnected(badClient)
+
+        assertThat("Should be failed after call", customTabActivityHelper.isFailed)
+    }
+
+    @Test
+    fun ensureClientThrowingNullPointerExceptionFromNewSessionDoesNotCrash() {
+        val exceptionToThrow = NullPointerException("Attempt to get length of null array")
+        val badClient =
+            mock<CustomTabsClient> {
+                on { it.warmup(anyLong()) } doReturn true
+                on { it.newSession(anyOrNull()) } doThrow exceptionToThrow
+            }
+        val customTabActivityHelper = getValidTabHandler()
+
+        customTabActivityHelper.onServiceConnected(badClient)
+
+        assertThat("Should be failed after call", customTabActivityHelper.isFailed)
+    }
+
     @CheckResult
     private fun getValidTabHandler(): CustomTabActivityHelper =
         CustomTabActivityHelper().also {
@@ -86,13 +99,14 @@ class CustomTabActivityHelperTest {
         }
 
     @CheckResult
-    private fun getClientThrowingSecurityException(): CustomTabsClient {
-        val exceptionToThrow = SecurityException("Binder invocation to an incorrect interface")
+    private fun getClientThrowingSecurityException(): CustomTabsClient =
+        getClientThrowing(SecurityException("Binder invocation to an incorrect interface"))
 
-        return mock {
+    @CheckResult
+    private fun getClientThrowing(exceptionToThrow: RuntimeException): CustomTabsClient =
+        mock {
             on { it.warmup(anyLong()) } doThrow exceptionToThrow
             on { it.extraCommand(anyString(), any()) } doThrow exceptionToThrow
-            on { it.newSession(any()) } doThrow exceptionToThrow
+            on { it.newSession(anyOrNull()) } doThrow exceptionToThrow
         }
-    }
 }

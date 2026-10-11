@@ -1,18 +1,6 @@
-/*
- *  Copyright (c) 2023 Abdo <abdo@abdnh.net>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2023 Abdo <abdo@abdnh.net>
+
 package com.ichi2.anki.pages
 
 import android.content.Context
@@ -24,20 +12,19 @@ import android.webkit.WebView
 import android.widget.TextView
 import androidx.activity.addCallback
 import androidx.core.os.BundleCompat
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import com.google.android.material.appbar.MaterialToolbar
 import com.ichi2.anki.R
 import com.ichi2.anki.SingleFragmentActivity
 import com.ichi2.anki.common.annotations.NeedsTest
-import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.dialogs.DiscardChangesDialog
+import com.ichi2.anki.dialogs.registerDeckSelectedHandler
+import com.ichi2.anki.dialogs.startDeckSelection
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.pages.viewmodel.ImageOcclusionArgs
 import com.ichi2.anki.pages.viewmodel.ImageOcclusionViewModel
-import com.ichi2.anki.pages.viewmodel.ImageOcclusionViewModel.Companion.IO_ARGS_KEY
-import com.ichi2.anki.startDeckSelection
+import com.ichi2.anki.pages.viewmodel.ImageOcclusionViewModel.Companion.ARG_IMAGE_OCCLUSION
 import com.ichi2.anki.utils.ext.launchCollectionInLifecycleScope
 import timber.log.Timber
 
@@ -57,15 +44,13 @@ import timber.log.Timber
  * @see ImageOcclusionViewModel
  * @see ImageOcclusion.getIntent
  */
-class ImageOcclusion :
-    PageFragment(R.layout.page_image_occlusion),
-    DeckSelectionDialog.DeckSelectionListener {
+class ImageOcclusion : PageFragment(R.layout.page_image_occlusion) {
     private val viewModel: ImageOcclusionViewModel by viewModels()
     private lateinit var deckNameView: TextView
 
     override val pagePath: String by lazy {
         val args =
-            BundleCompat.getParcelable(requireArguments(), IO_ARGS_KEY, ImageOcclusionArgs::class.java)
+            BundleCompat.getParcelable(requireArguments(), ARG_IMAGE_OCCLUSION, ImageOcclusionArgs::class.java)
                 ?: throw IllegalArgumentException("IO args were not setup correctly")
         val suffix =
             when (args) {
@@ -89,7 +74,7 @@ class ImageOcclusion :
         }
 
         deckNameView = view.findViewById(R.id.deck_name)
-        deckNameView.setOnClickListener { startDeckSelection(all = false, filtered = false, skipEmptyDefault = false) }
+        deckNameView.setOnClickListener { startDeckSelection(allowAll = false, allowFiltered = false) }
 
         @NeedsTest("#17393 verify that the added image occlusion cards are put in the correct deck")
         view.findViewById<MaterialToolbar>(R.id.toolbar).setOnMenuItemClickListener {
@@ -99,7 +84,7 @@ class ImageOcclusion :
             }
             return@setOnMenuItemClickListener true
         }
-
+        registerDeckSelectedHandler(action = ::onDeckSelected)
         setupFlows()
     }
 
@@ -118,7 +103,7 @@ class ImageOcclusion :
             }
         }
 
-    override fun onDeckSelected(deck: SelectableDeck?) {
+    private fun onDeckSelected(deck: SelectableDeck?) {
         if (deck == null) return
         require(deck is SelectableDeck.Deck)
         viewModel.handleDeckSelection(deck.deckId)
@@ -154,7 +139,7 @@ class ImageOcclusion :
             context: Context,
             args: ImageOcclusionArgs,
         ): Intent {
-            val arguments = bundleOf(IO_ARGS_KEY to args)
+            val arguments = Bundle().apply { putParcelable(ARG_IMAGE_OCCLUSION, args) }
             return SingleFragmentActivity.getIntent(context, ImageOcclusion::class, arguments)
         }
     }

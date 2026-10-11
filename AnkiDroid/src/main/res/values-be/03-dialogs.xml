@@ -6,46 +6,24 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="check_db_warning">Гэта можа заняць шмат часу. Працягнуць?</string>
-    <string name="contextmenu_deckpicker_delete_deck" maxLength="28">Выдаліць калоду</string>
     <string name="delete_deck_title">Выдаліць калоду?</string>
     <plurals name="delete_deck_message">
         <item quantity="one">Выдаліць усе карткі ў %1$s? Папка змяшчае %2$d картку</item>
@@ -74,7 +52,7 @@
     <string name="custom_study_new_extend">Павялічыць/паменшыць (“-3”) абмежаванні новых картак на сёння</string>
     <string name="custom_study_rev_extend">Павялічыць/паменшыць (“-3”) абмежаванні паўтарэння новых картак на сёння</string>
     <string name="custom_study_forgotten">Паўтарыць забытыя карткі за апошнія некалькі дзён:</string>
-    <string name="custom_study_ahead">Вывучыць на некалькі дзён наперад:</string>
+    <string name="custom_study_ahead_description">Review cards due in the next:</string>
     <string name="custom_study_preview">Прагледзець новыя карткі, якія дадзены за апошнія некалькі дзён:</string>
     <string name="custom_study_tags">Выберыце х картак з калоды:</string>
     <string name="storage_full_title">Сховішча запоўнена</string>
@@ -84,7 +62,7 @@
     <string name="restore_backup_title">Аднавіць з рэзервовай копіі?</string>
     <string name="restore_backup">Ваша калекцыя будзе заменена больш старой копіяй. Незахаваныя дасягненні будуць страчаныя.</string>
     <string name="restore_backup_choose_another">Выбраць іншую</string>
-    <string name="dialog_cancel">Адмяніць</string>
+    <string name="dialog_cancel">Скасаваць</string>
     <string name="dialog_ok">Добра</string>
     <string name="dialog_add" comment="Positive dialog action button label to add \'something\'">Дадаць</string>
     <string name="restore">Аднавіць</string>
@@ -96,6 +74,7 @@
     <string name="dialog_exit" comment="Label for a button which will exit/finish the current screen">Выйсці</string>
     <string name="dialog_continue">Працягнуць</string>
     <string name="dialog_processing">Апрацоўка&#8230;</string>
+    <string name="dialog_allow">Дазволіць</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">Стварыць</string>
     <string name="dialog_positive_delete" maxLength="28">Выдаліць</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -111,7 +90,7 @@
     <string name="check_media_warning">Гэта можа заняць шмат часу ў тым выпадку, калі калекцыя медыяфайлаў занадта вялікая. Працягнуць?</string>
     <string name="check_media_message">Праверка медыяфайлаў&#8230;</string>
     <string name="check_media_adding_missing_tag">Дадаванне тэгаў&#8230;</string>
-    <string name="check_media_tags_added">Тэгі дададзены</string>
+    <string name="check_media_tags_added">Вынікі тэгавання</string>
     <string name="delete_media_message">Выдаленне медыяфайлаў&#8230;</string>
     <string name="delete_media_result_title">Вынік выдалення</string>
     <plurals name="delete_media_result_message">
@@ -132,7 +111,7 @@
     <!-- Multimedia - Audio View -->
     <string name="multimedia_editor_audio_permission_denied">Адхілены доступ да запісу гуку</string>
     <string name="permission_denied">У доступе адмоўлена</string>
-    <string name="recording_permission_denied_message">Доступ да мікрафону патрэбны для \"Запісу голасу\". Дайце адпаведны доступ у наладах праграмы.</string>
+    <string name="microphone_permission_denied_message">Адмоўлена ў доступе да мікрафона. Дайце адпаведны доступ у наладах праграмы.</string>
     <!-- Database Integrity Check -->
     <string name="integrity_check_continue_anyway">Усё роўна працягнуць</string>
     <string name="integrity_check_insufficient_space">Праверка базы даных патрабуе вялікай колькасці часовага сховішча.\n\nВельмі пажадана мець прынамсі %s свабоднага месца на прыладзе для таго, каб паспяхова выканаць гэту аперацыю.</string>
@@ -220,7 +199,7 @@
     <string name="dismiss_backup_warning_title">Папярэджанне пра страту даных</string>
     <string name="dismiss_backup_warning_new_user">У сувязі са змяненнямі палітыкі прыватнасці Android, пасля выдалення праграмы вашы даныя і аўтаматычныя рэзервовыя копіі будуць выдалены з вашай прылады</string>
     <string name="dismiss_backup_warning_upgrade">У сувязі са змяненнямі палітыкі прыватнасці Android, пасля выдалення праграмы вашы даныя і аўтаматычныя рэзервовыя копіі стануць недаступны</string>
-    <string name="create_deck_numeric_hint">Калі ў вас ёсць праблемы з парадкам калод (напрыклад, ‘10’  калода стаіць перад ‘2’), замяніце ‘2’ на ‘02’</string>
+    <string name="create_deck_numeric_hint">Калі ў вас ёсць праблемы з парадкам калод (напрыклад, «10»  калода стаіць перад «2»), замяніце «2» на «02»</string>
     <!-- Set Due Date -->
     <string name="set_due_date_match_interval" comment="when setting a card\'s due date, this checkbox also changes the interval of the card">Задаць інтэрвал на тое ж самае значэнне</string>
     <plurals name="set_due_date_single_day_label" comment="a date control is provided afterwards">
@@ -286,13 +265,20 @@
     <!-- Special Fields -->
     <string name="standard_fields_tab_header" comment="Tab header for inserting non-special fields: {{Front}}">Палі</string>
     <string name="special_fields_tab_header" comment="Tab header for inserting special fields: {{Deck}}">Спецыяльныя</string>
-    <string name="special_field_example_suffix"><![CDATA[: ‘<b>%1$s</b>’]]></string>
+    <string name="special_field_example_suffix"><![CDATA[: «<b>%1$s</b>»]]></string>
     <string name="special_field_front_side_help">Змесціва пярэдняга шаблона. Аўдыя не будзе прайгравацца аўтаматычна</string>
     <string name="special_field_deck_help" comment="%s: either blank or \' %s\'">Поўная калода картак, якая ўключае бацькоўскія калоды%s</string>
     <string name="special_field_subdeck_help" comment="%s: either blank or \' %s\'">Бягучая калода картак, якая выключае бацькоўскія калоды%s</string>
-    <string name="special_field_flag_help">Выводзіць ‘%1$s’, дзе %2$s код пазнакі (%3$s\–%4$s\)</string>
+    <string name="special_field_flag_help">Выводзіць «%1$s», дзе %2$s код пазнакі (%3$s\–%4$s\)</string>
     <string name="special_field_tags_help" comment="%s: either blank or \' %s\'">Меткі нататкі%s</string>
     <string name="special_field_card_id_help" comment="%s: either blank or \' %s\'">Ідэнтыфікатар карткі%s</string>
     <string name="special_field_card_help" comment="%s: either blank or \' %s\'">Назва шаблону карткі%s</string>
     <string name="special_field_type_help" comment="%s: either blank or \' %s\'">Назва тыпу нататкі%s</string>
+    <!-- Change Note Type Dialog -->
+    <string name="change_note_type_from" comment="Label indicating the original note type before changing it">З</string>
+    <string name="change_note_type_to" comment="Label indicating the new note type to change to">На</string>
+    <!-- Add profile dialog -->
+    <string name="profile_name" comment="Label of the text field where the user types the name of a new profile">Назва профілю</string>
+    <string name="profile_name_empty_error" comment="Error shown when the user leaves the profile name empty">Назва профілю не можа быць пустой</string>
+    <string name="profile_name_too_long_error" comment="Error shown when a profile name exceeds the maximum length. %1$d is the maximum number of characters">Назва профілю павінна змяшчаць %1$d сімв. або менш</string>
 </resources>

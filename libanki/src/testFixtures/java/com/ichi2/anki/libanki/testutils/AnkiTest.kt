@@ -1,18 +1,4 @@
-/*
- *  Copyright (c) 2023 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.libanki.testutils
 
@@ -38,12 +24,14 @@ import com.ichi2.anki.libanki.getNotetype
 import com.ichi2.anki.libanki.testutils.ext.addNote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.setMain
 import net.ankiweb.rsdroid.exceptions.BackendDeckIsFilteredException
 import timber.log.Timber
+import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.time.Duration
@@ -177,6 +165,19 @@ interface AnkiTest {
         // HACK: We perform this to ensure that onCollectionLoaded is performed synchronously when startLoadingCollection
         // is called.
         col
+    }
+
+    /**
+     * Prevent DayRolloverAlarm from unburying cards during the test.
+     * Call before burying cards to process any pending day rollover.
+     */
+    fun preventDayRolloverAlarmFromUnburyingCards() {
+        col.backend.schedTimingToday()
+    }
+
+    /** Reproduces DayRolloverAlarm's cutoff query, which also processes pending day rollover. */
+    fun simulateDayRolloverAlarmCutoffQuery() {
+        col.sched.dayCutoff
     }
 
     fun addDeck(
@@ -396,12 +397,18 @@ interface AnkiTest {
         times: Int = 1,
         testBody: suspend TestScope.() -> Unit,
     ) {
-        val dispatcher = UnconfinedTestDispatcher()
+        // Use a unified scheduler on `Dispatchers.Main` and runTest uses, so
+        // advanceUntilIdle()/runCurrent() handle coroutines launched on `Main`.
+        val scheduler =
+            (context[ContinuationInterceptor] as? TestDispatcher)?.scheduler
+                ?: TestCoroutineScheduler()
+        val dispatcher = UnconfinedTestDispatcher(scheduler)
         Dispatchers.setMain(dispatcher)
         setupTestDispatcher(dispatcher)
+
         repeat(times) {
             if (times != 1) Timber.d("------ Executing test $it/$times ------")
-            kotlinx.coroutines.test.runTest(context, dispatchTimeout) {
+            kotlinx.coroutines.test.runTest(context + scheduler, dispatchTimeout) {
                 runTestInner(testBody)
             }
         }
@@ -418,8 +425,14 @@ interface AnkiTest {
     val Notetypes.basicAndReversed
         get() = byName("Basic (and reversed card)")!!
 
+    val Notetypes.basicOptionalReversed
+        get() = byName("Basic (optional reversed card)")!!
+
     val Notetypes.cloze
         get() = byName("Cloze")!!
+
+    val Notetypes.imageOcclusion
+        get() = byName("Image Occlusion")!!
 
     /**
      * Returns the backend protobuf of the note type

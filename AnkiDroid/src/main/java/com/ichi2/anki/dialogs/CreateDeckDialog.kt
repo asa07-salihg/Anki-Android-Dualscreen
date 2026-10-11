@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2021 Akshay Jadhav <jadhavakshay0701@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2021 Akshay Jadhav <jadhavakshay0701@gmail.com>
 
 package com.ichi2.anki.dialogs
 
@@ -26,10 +13,9 @@ import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.CollectionManager
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.R
-import com.ichi2.anki.libanki.Collection
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.libanki.Decks
-import com.ichi2.anki.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.utils.getInputField
 import com.ichi2.utils.getInputTextLayout
@@ -37,8 +23,8 @@ import com.ichi2.utils.input
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
 import com.ichi2.utils.show
-import com.ichi2.utils.title
 import net.ankiweb.rsdroid.exceptions.BackendDeckIsFilteredException
+import net.ankiweb.rsdroid.exceptions.BackendNotFoundException
 import timber.log.Timber
 
 /**
@@ -50,14 +36,21 @@ import timber.log.Timber
  */
 class CreateDeckDialog(
     private val context: Context,
-    private val title: Int,
+    private val title: CharSequence,
     private val deckDialogType: DeckDialogType,
     private val parentId: DeckId?,
+    /** The deck to rename. Only used by [DeckDialogType.RENAME_DECK] */
+    private val renamedDeckId: DeckId? = null,
 ) {
-    private var previousDeckName: String? = null
     lateinit var onNewDeckCreated: ((DeckId) -> Unit)
     private var initialDeckName = ""
     private var shownDialog: AlertDialog? = null
+
+    init {
+        require(deckDialogType != DeckDialogType.RENAME_DECK || renamedDeckId != null) {
+            "renamedDeckId is required to rename a deck"
+        }
+    }
 
     enum class DeckDialogType {
         DECK,
@@ -72,7 +65,6 @@ class CreateDeckDialog(
     var deckName: String
         get() = shownDialog!!.getInputField().text.toString()
         set(deckName) {
-            previousDeckName = deckName
             initialDeckName = deckName
         }
 
@@ -89,7 +81,7 @@ class CreateDeckDialog(
             AlertDialog
                 .Builder(context)
                 .show {
-                    title(title)
+                    setTitle(title)
                     // Resource ID for the dialog's positive action button text.
                     // Uses "Rename" for rename deck dialogs and "Create" for all other deck-related dialogs.
                     val positiveButtonTextRes =
@@ -131,7 +123,8 @@ class CreateDeckDialog(
                         dialog.positiveButton.isEnabled = false
                         return@input
                     }
-                    if (!maybeDeckName.equals(initialDeckName, ignoreCase = true) && deckExists(getColUnsafe, maybeDeckName)) {
+                    val existingDeckId = getColUnsafe.decks.idForName(maybeDeckName)
+                    if (existingDeckId != null && existingDeckId != renamedDeckId) {
                         dialog.getInputTextLayout().error = context.getString(R.string.error_name_exists)
                         dialog.positiveButton.isEnabled = false
                         return@input
@@ -151,14 +144,6 @@ class CreateDeckDialog(
         shownDialog = dialog
         return dialog
     }
-
-    /**
-     * @return true if the collection contains a deck with the given name
-     */
-    private fun deckExists(
-        col: Collection,
-        name: String,
-    ): Boolean = col.decks.byName(name) != null
 
     /**
      * Returns the fully qualified deck name for the provided input
@@ -181,9 +166,10 @@ class CreateDeckDialog(
 
     fun createDeck(deckName: String) {
         if (Decks.isValidDeckName(deckName)) {
-            createNewDeck(deckName)
-            // 11668: Display feedback if a deck is created
-            displayFeedback(context.getString(R.string.deck_created))
+            if (createNewDeck(deckName)) {
+                // 11668: Display feedback if a deck is created
+                displayFeedback(context.getString(R.string.deck_created))
+            }
         } else {
             Timber.d("CreateDeckDialog::createDeck - Not creating invalid deck name '%s'", deckName)
             displayFeedback(context.getString(R.string.invalid_deck_name), Snackbar.LENGTH_LONG)
@@ -201,6 +187,7 @@ class CreateDeckDialog(
             onNewDeckCreated(newDeckId)
         } catch (filteredAncestor: BackendDeckIsFilteredException) {
             Timber.w(filteredAncestor)
+            displayFeedback(filteredAncestor.localizedMessage ?: filteredAncestor.message ?: "", Snackbar.LENGTH_LONG)
             return false
         }
         return true
@@ -229,18 +216,21 @@ class CreateDeckDialog(
             Timber.w("CreateDeckDialog::renameDeck not renaming deck to invalid name")
             Timber.d("invalid deck name: %s", newDeckName)
             displayFeedback(context.getString(R.string.invalid_deck_name), Snackbar.LENGTH_LONG)
-        } else if (newDeckName != previousDeckName) {
+        } else {
+            val deckId = renamedDeckId!!
             try {
-                val decks = getColUnsafe.decks
-                val deckId = decks.id(previousDeckName!!)
-                decks.rename(decks.getLegacy(deckId)!!, newDeckName)
-                onNewDeckCreated(deckId)
-                // 11668: Display feedback if a deck is renamed
-                displayFeedback(context.getString(R.string.deck_renamed))
+                // the backend reports no change if the new name normalises to the old one
+                if (getColUnsafe.decks.rename(deckId, newDeckName).deck) {
+                    onNewDeckCreated(deckId)
+                    // 11668: Display feedback if a deck is renamed
+                    displayFeedback(context.getString(R.string.deck_renamed))
+                }
             } catch (e: BackendDeckIsFilteredException) {
                 Timber.w(e)
                 // We get a localized string from libanki to explain the error
                 displayFeedback(e.localizedMessage ?: e.message ?: "", Snackbar.LENGTH_LONG)
+            } catch (e: BackendNotFoundException) {
+                Timber.w(e, "not renaming deck %d", deckId)
             }
         }
         // AlertDialog should be dismissed after the Keyboard 'Done' or Deck 'Ok' button is pressed

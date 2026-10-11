@@ -6,43 +6,22 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- generic strings -->
     <string name="disabled">Uitgeschakeld</string>
@@ -61,7 +40,6 @@
     <string name="pref_cat_sync" comment="title of the sync preferences category" maxLength="41">Synchronisatie</string>
     <string name="pref_cat_scheduling" maxLength="41">Plannen</string>
     <string name="pref_cat_whiteboard" maxLength="41">Schrijfbord</string>
-    <string name="pref_cat_appearance" maxLength="41">Opmaak</string>
     <string name="pref_cat_themes" maxLength="41">Thema\'s</string>
     <string name="pref_cat_gestures" maxLength="41">Gebaren</string>
     <string name="pref_cat_controls" maxLength="41">Besturing</string>
@@ -69,6 +47,15 @@
     <string name="pref_cat_workarounds" maxLength="41">Tijdelijke oplossingen</string>
     <string name="pref_cat_plugins" maxLength="41">Plugins</string>
     <string name="pref_cat_editing" maxLength="41">Bewerken</string>
+    <string name="pref_cat_security" maxLength="41">Security</string>
+    <!-- Card template JavaScript API permissions -->
+    <string name="allow_dangerous_js_api_title" maxLength="41">Globally allow dangerous JavaScript APIs</string>
+    <string name="allow_dangerous_js_api_summ">Allows any card or template to read and modify other cards, or your Anki collection data.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="dangerous_js_api_denied_snackbar">Security: Unsafe JavaScript call blocked.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
+    <!-- External-app launching from card content (intent: / android-app: URLs) -->
+    <string name="allow_card_external_launch_title" maxLength="41">Kaarten toestaan andere apps te starten</string>
+    <string name="allow_card_external_launch_summ">Kaarten kunnen andere apps op jouw apparaat openen, waardoor mogelijk ongewenste acties kunnen worden uitgevoerd.\nBlijf hier af tenzij je alle kaarten en sjablonen vertrouwt in jouw collectie.</string>
+    <string name="card_external_launch_denied_snackbar">Security: Card blocked from launching another app.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
     <!-- preferences.xml entries-->
     <string name="whiteboard_stroke_width" maxLength="41">Lijnbreedte</string>
     <string name="use_input_tag" maxLength="41">Typ het antwoord op de kaart</string>
@@ -129,7 +116,6 @@
     <string name="tts_summ">Vraag en antwoord voorlezen als er geen geluidsbestand is opgenomen</string>
     <!-- Sync -->
     <string name="sync_fetch_missing_media" maxLength="41">Media downloaden</string>
-    <string name="sync_account" maxLength="41">AnkiWeb account</string>
     <string name="sync_account_summ_logged_out">Niet aangemeld</string>
     <string name="automatic_sync_choice" maxLength="41">Automatische synchronisatie</string>
     <string name="automatic_sync_choice_summ">Synchronizeer automatisch bij het starten en sluiten van de app indien de laatste synchronisatie meer dan 10 minuten geleden was.</string>
@@ -157,11 +143,9 @@
     <string name="select_locale_title">Taal selecteren</string>
     <string name="software_render" maxLength="41">Hardware render kaart uitschakelen</string>
     <string name="software_render_summ">Hardware render is sneller maar kan problemen hebben, met name op Android 8/8.1. Als u delen van de gebruikersinterface voor de beoordeling van de kaart niet kunt zien, probeer dan deze instelling.</string>
-    <string name="safe_display" maxLength="41">Veilige weergavemodus</string>
-    <string name="safe_display_summ">Alle animaties uitschakelen en veiligere methode gebruiken om kaarten te trekken. Dit kan nodig zijn voor sommige E-inkt-apparaten.</string>
-    <string name="disable_extended_text_ui" maxLength="41">Bewerkingsmodus voor een enkel veld uitschakelen</string>
+    <string name="disable_extended_text_ui" maxLength="41">Disable single-field edit mode</string>
     <!--See: multimedia_editor_popup_cloze. We can\'t use format strings as this is auto-generated-->
-    <string name="disable_extended_text_ui_summ">Laat het contextmenu \'Invuloefening\' toe in de landschapsmodus.</string>
+    <string name="disable_extended_text_ui_summ">Allows \'Cloze deletion\' context menu when in landscape mode.</string>
     <string name="vertical_centering" maxLength="41">Uitlijnen in het midden</string>
     <string name="vertical_centering_summ">De inhoud van kaarten verticaal centreren</string>
     <string name="pref_double_tap_time_interval" maxLength="41">Dubbele aanraking tijdsinterval</string>
@@ -172,6 +156,8 @@
     <string name="show_estimates_summ">In de antwoordknoppen weergeven wanneer de volgende overhoring is</string>
     <string name="show_large_answer_buttons" maxLength="41">Laat grote antwoordknoppen zien</string>
     <string name="show_large_answer_buttons_summ">Toon antwoordknop in 2 rijen</string>
+    <string name="remove_animations" maxLength="41">Animaties verwijderen</string>
+    <string name="remove_animations_summary">Also enabled if animations are removed on the system settings</string>
     <string name="show_top_bar" maxLength="41">Toon bovenste balk</string>
     <string name="show_top_bar_summary">Toon aantal kaarten, vlag en markeer in de balk bovenaan</string>
     <string name="show_progress" maxLength="41">Resterende weergeven</string>
@@ -207,8 +193,6 @@
     <string name="pref_cat_reviewer" maxLength="41">Studiescherm</string>
     <string name="show_deck_title" maxLength="41">Settitel weergeven</string>
     <string name="accessibility" maxLength="41">Toegankelijkheid</string>
-    <!-- Paste clipboard image as png option -->
-    <string name="paste_as_png" maxLength="41">Plak klembord afbeeldingen als PNG</string>
     <string name="exit_via_double_tap_back" maxLength="41">Druk twee keer op terug om terug te gaan</string>
     <string name="exit_via_double_tap_back_summ">Om te voorkomen dat je per ongeluk het studiescherm of de app verlaat</string>
     <!-- Allow all files in media imports -->
@@ -222,7 +206,7 @@
         Als dit niet is ingesteld, wordt in plaats daarvan de standaard AnkiWeb-server gebruikt.
         <a href="%s">Meer informatie</a>
         ]]></string>
-    <string name="custom_sync_server_base_url_title" maxLength="41">Sync URL</string>
+    <string name="custom_sync_server_base_url_title" maxLength="41">Synchroniseer URL</string>
     <string name="custom_sync_certificate_title" maxLength="41">Aangepast root-certificaat (PEM)</string>
     <!-- Key Bindings -->
     <string name="keyboard">Toetsenbord</string>
@@ -248,7 +232,7 @@
     <string name="analytics_title" maxLength="41">Gebruik van functies delen</string>
     <string name="analytics_summ">Je kunt bijdragen aan AnkiDroid door het ontwikkelteam te laten zien welke functies mensen gebruiken</string>
     <string name="note_editor_replace_newlines" maxLength="41">Nieuwe lijnen vervangen door HTML</string>
-    <string name="note_editor_replace_newlines_summ">Zet in de memobewerker alle instanties van &lt;br&gt; om in nieuwe lijnen bij het bewerken van een kaart.</string>
+    <string name="note_editor_replace_newlines_summ">In the note editor, convert any instances of &lt;br&gt; to newlines when editing a card.</string>
     <string name="type_in_answer_focus" maxLength="41">Focus op ‘type in antwoord’</string>
     <string name="type_in_answer_focus_summ">Automatisch focussen op het \'type in antwoord\'-veld in het studiescherm</string>
     <!-- About -->
@@ -278,6 +262,10 @@
     <string name="user_action_8" maxLength="28">Gebruikersactie 8</string>
     <string name="user_action_9" maxLength="28">Gebruikersactie 9</string>
     <string name="toggle_auto_advance" maxLength="28">Automatische vooruitgang in-/uitschakelen</string>
+    <string name="enable_auto_advance" maxLength="28">Automatisch vorderen inschakelen</string>
+    <string name="disable_auto_advance" maxLength="28">Automatisch vorderen uitschakelen</string>
+    <string name="enable_voice_recording" maxLength="28">Spraakopname inschakelen</string>
+    <string name="disable_voice_recording" maxLength="28">Spraakopname uitschakelen</string>
     <!-- Select card side -->
     <string name="card_side_selection_title">Selecteer kaart zijde</string>
     <string name="card_side_question">Vraag</string>
@@ -292,6 +280,8 @@
     <string name="pref_cat_experimental" maxLength="41" tools:ignore="UnusedResources">Experimenteel</string>
     <string name="readtext_deprecation_warn">AnkiDroid heeft een beter TTS-mechanisme geïntroduceerd dat compatibel is met andere Anki-clients en meer stemmen en verbeteringen in het afspelen van talen bevat!nnUpgrade zo snel mogelijk, want deze instelling wordt binnenkort verwijderd</string>
     <string name="readtext_reviewer_warn" tools:ignore="UnusedResources">Upgrade naar de nieuwe tekst-naar-spraak-indeling</string>
+    <string name="allow_templates_to_record_audio" maxLength="41">Allow templates to record audio</string>
+    <string name="template_is_trying_to_record_audio">This template is trying to record audio</string>
     <string name="pref_fixed_port_title" maxLength="41">localStorage in Study Screen</string>
     <string name="pref_fixed_port_summary">Enables JavaScript localStorage by using a fixed server port in the Study Screen</string>
     <!-- Developer options -->

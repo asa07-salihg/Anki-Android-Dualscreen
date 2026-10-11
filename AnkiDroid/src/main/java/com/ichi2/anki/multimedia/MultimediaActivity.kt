@@ -1,26 +1,17 @@
-/*
- * Copyright (c) 2024 Ashish Yadav <mailtoashish693@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (c) 2024 Ashish Yadav <mailtoashish693@gmail.com>
 
 package com.ichi2.anki.multimedia
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
-import androidx.core.os.bundleOf
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.google.android.material.button.MaterialButton
@@ -31,12 +22,15 @@ import com.ichi2.anki.compat.CompatHelper.Companion.getSerializableExtraCompat
 import com.ichi2.anki.databinding.ActivityMultimediaBinding
 import com.ichi2.anki.multimediacard.IMultimediaEditableNote
 import com.ichi2.anki.multimediacard.fields.IField
+import com.ichi2.anki.settings.enums.NightTheme
 import com.ichi2.anki.snackbar.BaseSnackbarBuilderProvider
 import com.ichi2.anki.snackbar.SnackbarBuilder
-import com.ichi2.themes.setTransparentStatusBar
+import com.ichi2.anki.startup.ensureStorageIsReady
+import com.ichi2.themes.Themes
 import com.ichi2.utils.FragmentFactoryUtils
 import dev.androidbroadcast.vbpd.viewBinding
 import timber.log.Timber
+import java.io.File
 import java.io.Serializable
 import kotlin.reflect.KClass
 import kotlin.reflect.jvm.jvmName
@@ -65,8 +59,11 @@ class MultimediaActivity :
     BaseSnackbarBuilderProvider {
     private val binding by viewBinding(ActivityMultimediaBinding::bind)
 
-    private val Intent.multimediaArgsExtra: MultimediaActivityExtra?
-        get() = extras?.getSerializableCompat(MULTIMEDIA_ARGS_EXTRA)
+    override val analyticsScreenName: String
+        get() = intent.getStringExtra(EXTRA_FRAGMENT_NAME)?.substringAfterLast('.') ?: super.analyticsScreenName
+
+    private val Intent.multimediaArgsFile: File?
+        get() = extras?.getSerializableCompat(EXTRA_FRAGMENT_ARGS)
 
     private val Intent.mediaOptionsExtra: Serializable?
         get() = getSerializableExtraCompat(EXTRA_MEDIA_OPTIONS)
@@ -76,7 +73,16 @@ class MultimediaActivity :
             return
         }
         super.onCreate(savedInstanceState)
-        setTransparentStatusBar()
+        enableEdgeToEdge(
+            statusBarStyle =
+                SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) {
+                    Themes.currentTheme is NightTheme
+                },
+        )
+        if (!ensureStorageIsReady()) {
+            return
+        }
+        setupEdgeToEdge()
         setSupportActionBar(binding.toolbar)
 
         // avoid recreating the fragment on configuration changes
@@ -85,17 +91,17 @@ class MultimediaActivity :
         }
 
         val fragmentClassName =
-            requireNotNull(intent.getStringExtra(MULTIMEDIA_FRAGMENT_NAME_EXTRA)) {
-                "'$MULTIMEDIA_FRAGMENT_NAME_EXTRA' extra should be provided"
+            requireNotNull(intent.getStringExtra(EXTRA_FRAGMENT_NAME)) {
+                "'$EXTRA_FRAGMENT_NAME' extra should be provided"
             }
 
         val fragment =
             FragmentFactoryUtils.instantiate<Fragment>(this, fragmentClassName).apply {
                 arguments =
-                    bundleOf(
-                        MULTIMEDIA_ARGS_EXTRA to intent.multimediaArgsExtra,
-                        EXTRA_MEDIA_OPTIONS to intent.mediaOptionsExtra,
-                    )
+                    Bundle().apply {
+                        putSerializable(EXTRA_FRAGMENT_ARGS, intent.multimediaArgsFile)
+                        putSerializable(EXTRA_MEDIA_OPTIONS, intent.mediaOptionsExtra)
+                    }
             }
 
         supportFragmentManager.commit {
@@ -105,6 +111,21 @@ class MultimediaActivity :
         binding.toolbar.setNavigationOnClickListener {
             Timber.d("MultimediaActivity:: Back pressed")
             onBackPressedDispatcher.onBackPressed()
+        }
+    }
+
+    /**
+     * Applies edge-to-edge insets for the app bar. The hosted fragment insets its own root,
+     * see [MultimediaFragment].
+     */
+    private fun setupEdgeToEdge() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.appBar) { view, insets ->
+            val bars =
+                insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+                )
+            view.updatePadding(left = bars.left, top = bars.top, right = bars.right)
+            insets
         }
     }
 
@@ -120,8 +141,8 @@ class MultimediaActivity :
     }
 
     companion object {
-        const val MULTIMEDIA_ARGS_EXTRA = "fragmentArgs"
-        const val MULTIMEDIA_FRAGMENT_NAME_EXTRA = "fragmentName"
+        const val EXTRA_FRAGMENT_ARGS = "extra_fragment_args"
+        const val EXTRA_FRAGMENT_NAME = "extra_fragment_name"
 
         /** used in case a fragment supports more than media operations **/
         const val EXTRA_MEDIA_OPTIONS = "extra_media_options"
@@ -133,8 +154,8 @@ class MultimediaActivity :
             mediaOptions: Serializable? = null,
         ): Intent =
             Intent(context, MultimediaActivity::class.java).apply {
-                putExtra(MULTIMEDIA_ARGS_EXTRA, arguments)
-                putExtra(MULTIMEDIA_FRAGMENT_NAME_EXTRA, fragmentClass.jvmName)
+                putExtra(EXTRA_FRAGMENT_ARGS, arguments?.let { MultimediaArgsStorage.create(context).save(it) })
+                putExtra(EXTRA_FRAGMENT_NAME, fragmentClass.jvmName)
                 putExtra(EXTRA_MEDIA_OPTIONS, mediaOptions)
             }
     }

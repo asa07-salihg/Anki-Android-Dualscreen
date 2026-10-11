@@ -1,19 +1,5 @@
-/*
- * Copyright (c) 2025 Ashish Yadav <mailtoashish693@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 Ashish Yadav <mailtoashish693@gmail.com>
 
 package com.ichi2.anki.pages.viewmodel
 
@@ -88,7 +74,7 @@ class ImageOcclusionViewModel(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     val args: ImageOcclusionArgs =
-        checkNotNull(savedStateHandle[IO_ARGS_KEY]) { "$IO_ARGS_KEY required" }
+        checkNotNull(savedStateHandle[ARG_IMAGE_OCCLUSION]) { "$ARG_IMAGE_OCCLUSION required" }
 
     private val originalDeckId: DeckId? = (args as? ImageOcclusionArgs.Add)?.originalDeckId
 
@@ -157,6 +143,6 @@ class ImageOcclusionViewModel(
     }
 
     companion object {
-        const val IO_ARGS_KEY = "IMAGE_OCCLUSION_ARGS"
+        const val ARG_IMAGE_OCCLUSION = "arg_image_occlusion"
     }
 }

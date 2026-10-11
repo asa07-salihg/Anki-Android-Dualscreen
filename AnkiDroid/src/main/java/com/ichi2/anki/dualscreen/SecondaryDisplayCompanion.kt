@@ -37,10 +37,12 @@ import com.ichi2.anki.NoteEditorActivity
 import com.ichi2.anki.R
 import com.ichi2.anki.Reviewer
 import com.ichi2.anki.SingleFragmentActivity
+import com.ichi2.anki.common.destinations.NoteEditorDestination
+import com.ichi2.anki.common.destinations.StatisticsDestination
 import com.ichi2.anki.libanki.sched.DeckNode
-import com.ichi2.anki.noteeditor.NoteEditorLauncher
+import com.ichi2.anki.noteeditor.toIntent
 import com.ichi2.anki.pages.Statistics
-import com.ichi2.anki.pages.StatisticsDestination
+import com.ichi2.anki.pages.toIntent
 import com.ichi2.anki.preferences.PreferencesActivity
 import com.ichi2.anki.ui.windows.permissions.AllPermissionsExplanationActivity
 import com.ichi2.anki.ui.windows.permissions.PermissionsActivity
@@ -158,10 +160,10 @@ open class SecondaryDisplayCompanion(
                     Intent(ankiActivity, DeckPicker::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 },
                 Shortcut(R.id.dualscreen_companion_add, NoteEditorActivity::class, DeckPicker::class) {
-                    NoteEditorLauncher.AddNote(deck?.did).toIntent(ankiActivity)
+                    NoteEditorDestination.AddNote(deck?.did).toIntent(ankiActivity)
                 },
                 Shortcut(R.id.dualscreen_companion_browse, CardBrowser::class) { Intent(ankiActivity, CardBrowser::class.java) },
-                Shortcut(R.id.dualscreen_companion_statistics, Statistics::class) { StatisticsDestination().toIntent(ankiActivity) },
+                Shortcut(R.id.dualscreen_companion_statistics, Statistics::class) { StatisticsDestination.toIntent(ankiActivity) },
                 Shortcut(R.id.dualscreen_companion_settings, PreferencesActivity::class) { PreferencesActivity.getIntent(ankiActivity) },
             )
     }

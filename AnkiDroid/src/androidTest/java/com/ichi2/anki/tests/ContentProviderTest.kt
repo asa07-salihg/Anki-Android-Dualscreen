@@ -1,20 +1,8 @@
-/*
- * Copyright (c) 2015 Frank Oltmanns <frank.oltmanns@gmail.com>
- * Copyright (c) 2015 Timothy Rae <timothy.rae@gmail.com>
- * Copyright (c) 2016 Mark Carter <mark@marcardar.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2015 Frank Oltmanns <frank.oltmanns@gmail.com>
+// SPDX-FileCopyrightText: Copyright (c) 2015 Timothy Rae <timothy.rae@gmail.com>
+// SPDX-FileCopyrightText: Copyright (c) 2016 Mark Carter <mark@marcardar.com>
+
 package com.ichi2.anki.tests
 
 import android.content.ContentResolver
@@ -24,9 +12,14 @@ import android.database.Cursor
 import android.database.CursorWindow
 import android.net.Uri
 import anki.cards.FsrsMemoryState
+import anki.collection.OpChanges
 import anki.notetypes.StockNotetype
 import com.ichi2.anki.CollectionManager
+import com.ichi2.anki.Flag
 import com.ichi2.anki.FlashCardsContract
+import com.ichi2.anki.common.storage.CollectionHelper
+import com.ichi2.anki.common.storage.StorageDecision
+import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
 import com.ichi2.anki.common.utils.emptyStringArray
 import com.ichi2.anki.libanki.Card
@@ -44,10 +37,12 @@ import com.ichi2.anki.libanki.backend.BackendUtils
 import com.ichi2.anki.libanki.exception.ConfirmModSchemaException
 import com.ichi2.anki.libanki.getStockNotetype
 import com.ichi2.anki.libanki.sched.Scheduler
+import com.ichi2.anki.observability.ChangeManager
 import com.ichi2.anki.provider.pureAnswer
 import com.ichi2.anki.testutil.DatabaseUtils.cursorFillWindow
 import com.ichi2.anki.testutil.GrantStoragePermission.storagePermission
 import com.ichi2.anki.testutil.addNote
+import com.ichi2.anki.testutil.awaitPendingOpChanges
 import com.ichi2.anki.testutil.grantPermissions
 import com.ichi2.testutils.common.assertThrows
 import kotlinx.serialization.json.Json
@@ -70,6 +65,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import timber.log.Timber
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.junit.JUnitAsserter.assertNotNull
@@ -256,6 +252,21 @@ class ContentProviderTest : InstrumentedTest() {
 
         assertThrows<RuntimeException>("RuntimeException is thrown when deleting note") {
             addedNote.load(col)
+        }
+    }
+
+    @Test
+    fun queryFailsWhenStorageIsUndecided() {
+        // regression test: must be a type Binder can marshal to the calling app
+        // (IllegalStateException), not StorageNotConfiguredException, which would
+        // kill the AnkiDroid process when a third-party app calls the API
+        CollectionHelper.storageDecisionTestOverride = StorageDecision.Undecided
+        try {
+            assertThrows<IllegalStateException>("query() while storage is undecided") {
+                contentResolver.query(FlashCardsContract.Note.CONTENT_URI, null, null, null, null)?.close()
+            }
+        } finally {
+            CollectionHelper.storageDecisionTestOverride = null
         }
     }
 
@@ -871,6 +882,8 @@ class ContentProviderTest : InstrumentedTest() {
     }
 
     @Test
+    // query is expected to throw, so no Cursor is returned to close
+    @Suppress("Recycle")
     fun testQueryCardById_invalidIdThrows() {
         val invalidCardUri =
             Uri.withAppendedPath(
@@ -893,6 +906,8 @@ class ContentProviderTest : InstrumentedTest() {
     }
 
     @Test
+    // query is expected to throw, so no Cursor is returned to close
+    @Suppress("Recycle")
     fun testSearchCards_invalidQueryAndThrows() {
         val exception =
             assertThrows<IllegalArgumentException> {
@@ -2211,7 +2226,7 @@ class ContentProviderTest : InstrumentedTest() {
                 null,
                 // sortOrder is ignored for this URI
                 null,
-            )?.let { cursor ->
+            )?.use { cursor ->
                 if (!cursor.moveToFirst()) {
                     fail("no rows in cursor")
                 }
@@ -2456,6 +2471,247 @@ class ContentProviderTest : InstrumentedTest() {
         Timber.i("closeCollection: %s", "ContentProviderTest: reopenCol")
         CollectionManager.closeCollectionBlocking()
         return col
+    }
+
+    @Test
+    fun testInsertNotifiesUI() {
+        val counter = TestSubscriber()
+        ChangeManager.subscribe(counter)
+        try {
+            val mid = noteTypeId
+            val noteType = col.notetypes.get(mid)!!
+            val fieldCount = noteType.fields.length()
+            val emptyFields = Array(fieldCount) { "" }.joinToString(separator = "\u001f")
+
+            val values =
+                ContentValues().apply {
+                    put(FlashCardsContract.Note.MID, mid)
+                    put(FlashCardsContract.Note.FLDS, emptyFields)
+                }
+
+            contentResolver.insert(FlashCardsContract.Note.CONTENT_URI, values)
+            assertNotificationReceived(counter)
+        } finally {
+            ChangeManager.unsubscribe(counter)
+        }
+    }
+
+    @Test
+    fun testUpdateNotifiesUI() {
+        val noteId = createdNotes.first().lastPathSegment!!.toLong()
+        val uri = Uri.withAppendedPath(FlashCardsContract.Note.CONTENT_URI, noteId.toString())
+        val values =
+            ContentValues().apply {
+                put(FlashCardsContract.Note.TAGS, "new_tag")
+            }
+        val counter = TestSubscriber()
+        ChangeManager.subscribe(counter)
+        try {
+            contentResolver.update(uri, values, null, null)
+            assertNotificationReceived(counter)
+        } finally {
+            ChangeManager.unsubscribe(counter)
+        }
+    }
+
+    @Test
+    fun testUpdateNonExistentNoteDoesNotNotifyUI() {
+        val counter = TestSubscriber()
+        ChangeManager.awaitPendingOpChanges()
+        ChangeManager.subscribe(counter)
+        try {
+            val values =
+                ContentValues().apply {
+                    put(FlashCardsContract.Note.TAGS, "new_tag")
+                }
+            val uri = Uri.withAppendedPath(FlashCardsContract.Note.CONTENT_URI, "999999")
+
+            assertFailsWith<Exception> {
+                contentResolver.update(uri, values, null, null)
+            }
+
+            ChangeManager.awaitPendingOpChanges()
+            assertEquals("UI should not be notified if update is failed", 0, counter.count)
+        } finally {
+            ChangeManager.unsubscribe(counter)
+        }
+    }
+
+    @Test
+    fun testDeleteNotifiesUI() {
+        val noteId = createdNotes.first().lastPathSegment!!.toLong()
+        val uri = Uri.withAppendedPath(FlashCardsContract.Note.CONTENT_URI, noteId.toString())
+        val counter = TestSubscriber()
+        ChangeManager.subscribe(counter)
+        try {
+            contentResolver.delete(uri, null, null)
+            assertNotificationReceived(counter)
+        } finally {
+            ChangeManager.unsubscribe(counter)
+        }
+    }
+
+    @Test
+    fun testDeleteNonExistentNoteDoesNotNotifyUI() {
+        val counter = TestSubscriber()
+        ChangeManager.awaitPendingOpChanges()
+        ChangeManager.subscribe(counter)
+        try {
+            val uri = Uri.withAppendedPath(FlashCardsContract.Note.CONTENT_URI, "999999")
+            val deletedCount = contentResolver.delete(uri, null, null)
+            assertEquals("It should return 0 for non-existent note", 0, deletedCount)
+
+            ChangeManager.awaitPendingOpChanges()
+            assertEquals("UI should not be notify if nothing was deleted", 0, counter.count)
+        } finally {
+            ChangeManager.unsubscribe(counter)
+        }
+    }
+
+    @Test
+    fun testBulkInsertNotifiesUI() {
+        val counter = TestSubscriber()
+        ChangeManager.subscribe(counter)
+        try {
+            val mid = noteTypeId
+            val noteType = col.notetypes.get(mid)!!
+            val fieldCount = noteType.fields.length()
+            val emptyFields = Array(fieldCount) { "" }.joinToString(separator = "\u001f")
+
+            val values =
+                arrayOf(
+                    ContentValues().apply {
+                        put(FlashCardsContract.Note.MID, mid)
+                        put(FlashCardsContract.Note.FLDS, emptyFields)
+                    },
+                )
+
+            contentResolver.bulkInsert(FlashCardsContract.Note.CONTENT_URI, values)
+            assertNotificationReceived(counter)
+        } finally {
+            ChangeManager.unsubscribe(counter)
+        }
+    }
+
+    @Test
+    fun testBulkInsertEmptyListDoesNotNotifyUI() {
+        val counter = TestSubscriber()
+        ChangeManager.awaitPendingOpChanges()
+        ChangeManager.subscribe(counter)
+        try {
+            contentResolver.bulkInsert(FlashCardsContract.Note.CONTENT_URI, emptyArray())
+
+            ChangeManager.awaitPendingOpChanges()
+            assertEquals("UI should not be notified for empty bulk insert", 0, counter.count)
+        } finally {
+            ChangeManager.unsubscribe(counter)
+        }
+    }
+
+    @Test
+    fun testSetFlagCard() {
+        val noteId = createdNotes.first().lastPathSegment!!.toLong()
+        val noteUri = Uri.withAppendedPath(FlashCardsContract.Note.CONTENT_URI, noteId.toString())
+        val noteCardsUri = Uri.withAppendedPath(noteUri, "cards")
+        val card = col.getNote(noteId).cards(col).single()
+        val noteCardUri = Uri.withAppendedPath(noteCardsUri, card.ord.toString())
+
+        val negativeValue =
+            ContentValues().apply {
+                put(FlashCardsContract.Card.FLAGS, Flag.MIN_CODE - 1)
+            }
+        val exception1 = assertThrows<IllegalArgumentException> { contentResolver.update(noteCardUri, negativeValue, null, null) }
+        assertEquals(exception1.message, "Flags value must be in the range from ${Flag.MIN_CODE} to ${Flag.MAX_CODE}")
+
+        val tooLargeValue =
+            ContentValues().apply {
+                put(FlashCardsContract.Card.FLAGS, Flag.MAX_CODE + 1)
+            }
+        val exception2 = assertThrows<IllegalArgumentException> { contentResolver.update(noteCardUri, tooLargeValue, null, null) }
+        assertEquals(exception2.message, "Flags value must be in the range from ${Flag.MIN_CODE} to ${Flag.MAX_CODE}")
+
+        val correctValue =
+            ContentValues().apply {
+                put(FlashCardsContract.Card.FLAGS, Flag.MAX_CODE)
+            }
+        contentResolver.update(noteCardUri, correctValue, null, null)
+
+        val cursor =
+            checkNotNull(
+                contentResolver.query(
+                    noteCardUri,
+                    arrayOf(FlashCardsContract.Card.FLAGS),
+                    null,
+                    null,
+                    null,
+                ),
+            ) { "cursor from /notes/#/cards/#" }
+
+        cursor.use {
+            assertTrue(it.moveToFirst())
+            assertEquals(Flag.MAX_CODE, it.getInt(it.getColumnIndex(FlashCardsContract.Card.FLAGS)))
+        }
+    }
+
+    @Test
+    fun testSetUserFlag() {
+        val noteId = createdNotes.first().lastPathSegment!!.toLong()
+        val noteUri = Uri.withAppendedPath(FlashCardsContract.Note.CONTENT_URI, noteId.toString())
+        val noteCardsUri = Uri.withAppendedPath(noteUri, "cards")
+        val card = col.getNote(noteId).cards(col).single()
+        val noteCardUri = Uri.withAppendedPath(noteCardsUri, card.ord.toString())
+
+        // Set 8 (1000 in binary) manually
+        card.flags = 8
+        col.updateCard(card)
+
+        // Set 4 (100 in binary) using setUserFlag method
+        card.setUserFlag(4)
+        col.updateCard(card)
+
+        // If we override only first 3 bits, we won't affect fourth.
+        // Result will be 12 (1000 | 0100 = 1100 in binary).
+        val updatedCard = col.getNote(noteId).cards(col).single()
+        assertEquals(12, updatedCard.flags)
+
+        val cursor =
+            checkNotNull(
+                contentResolver.query(
+                    noteCardUri,
+                    arrayOf(FlashCardsContract.Card.FLAGS),
+                    null,
+                    null,
+                    null,
+                ),
+            ) { "cursor from /notes/#/cards/#" }
+
+        // But cursor should return 4 (only first 3 bits)
+        cursor.use {
+            assertTrue(it.moveToFirst())
+            assertEquals(4, it.getInt(it.getColumnIndex(FlashCardsContract.Card.FLAGS)))
+        }
+    }
+
+    // TODO: PERF: use TestChangeSubscriber once we've moved to testFixtures
+    private class TestSubscriber : ChangeManager.Subscriber {
+        var count = 0
+
+        override fun opExecuted(
+            changes: OpChanges,
+            handler: Any?,
+        ) {
+            count++
+        }
+    }
+
+    private fun assertNotificationReceived(subscriber: TestSubscriber) {
+        val timeout = 5000L
+        val startTime = TimeManager.time.intTimeMS()
+        while (subscriber.count == 0 && TimeManager.time.intTimeMS() - startTime < timeout) {
+            Thread.sleep(100)
+        }
+
+        assertTrue("UI should be notified of the change", subscriber.count > 0)
     }
 
     private val contentResolver: ContentResolver

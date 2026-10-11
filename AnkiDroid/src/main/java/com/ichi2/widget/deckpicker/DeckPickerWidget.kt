@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2024 Anoop <xenonnn4w@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2024 Anoop <xenonnn4w@gmail.com>
 
 package com.ichi2.widget.deckpicker
 
@@ -22,17 +9,26 @@ import android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import android.util.SizeF
+import android.util.TypedValue
 import android.view.View
+import android.view.View.MeasureSpec
 import android.widget.RemoteViews
-import com.ichi2.anki.AnkiDroidApp
+import android.widget.TextView
+import androidx.core.os.BundleCompat
 import com.ichi2.anki.CollectionManager.withCol
-import com.ichi2.anki.IntentHandler.Companion.intentToReviewDeckFromShortcuts
 import com.ichi2.anki.R
-import com.ichi2.anki.analytics.UsageAnalytics
+import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.crashreporting.CrashReportService
+import com.ichi2.anki.common.destinations.DeckOptionsDestination
+import com.ichi2.anki.common.destinations.DeferredNavigation
+import com.ichi2.anki.common.destinations.ReviewDeckDestination
+import com.ichi2.anki.common.destinations.toIntent
 import com.ichi2.anki.isCollectionEmpty
 import com.ichi2.anki.libanki.DeckId
-import com.ichi2.anki.pages.DeckOptionsDestination
+import com.ichi2.anki.pages.fromDeckId
 import com.ichi2.widget.ACTION_UPDATE_WIDGET
 import com.ichi2.widget.AnalyticsWidgetProvider
 import com.ichi2.widget.AppWidgetId
@@ -46,6 +42,7 @@ import com.ichi2.widget.setRecurringAlarm
 import com.ichi2.widget.updateAppWidget
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 /**
  * Data class representing the data for a deck displayed in the widget.
@@ -81,16 +78,14 @@ class DeckPickerWidget : AnalyticsWidgetProvider() {
         /**
          * Updates the widget with the deck data.
          *
-         * This method replaces the entire view content with entries for each deck ID
-         * provided in the `deckIds` array. If any decks are deleted,
-         * they will be ignored, and only the rest of the decks will be displayed.
+         * This method replaces the view content with as many complete deck rows as fit
+         * in the widget. Deleted decks are ignored.
          *
          * @param context the context of the application
          * @param appWidgetManager the AppWidgetManager instance
          * @param appWidgetId the ID of the app widget
          * @param deckIds the array of deck IDs to be displayed in the widget.
-         *                Each ID corresponds to a specific deck, and the view will
-         *                contain exactly the decks whose IDs are in this list.
+         *                The order is preserved when choosing which decks fit.
          *
          */
         fun updateWidget(
@@ -104,7 +99,7 @@ class DeckPickerWidget : AnalyticsWidgetProvider() {
                 showEmptyWidget(context, appWidgetManager, appWidgetId, remoteViews)
                 return
             }
-            AnkiDroidApp.applicationScope.launch {
+            applicationScope.launch {
                 val isCollectionEmpty = isCollectionEmpty()
                 if (isCollectionEmpty) {
                     showEmptyCollection(context, appWidgetManager, appWidgetId, remoteViews)
@@ -118,19 +113,59 @@ class DeckPickerWidget : AnalyticsWidgetProvider() {
                     return@launch
                 }
 
-                showDeck(context, appWidgetManager, appWidgetId, remoteViews, deckIds)
+                val options = appWidgetManager.getAppWidgetOptions(appWidgetId.id)
+                appWidgetManager.updateAppWidget(appWidgetId, createSizedDeckViews(context, deckData, options))
             }
         }
 
-        private suspend fun showDeck(
+        private suspend fun createSizedDeckViews(
             context: Context,
-            appWidgetManager: AppWidgetManager,
-            appWidgetId: AppWidgetId,
-            remoteViews: RemoteViews,
-            deckIds: LongArray,
-        ) {
+            deckData: List<DeckWidgetData>,
+            options: Bundle,
+        ): RemoteViews {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val sizes = BundleCompat.getParcelableArrayList(options, AppWidgetManager.OPTION_APPWIDGET_SIZES, SizeF::class.java)
+                if (!sizes.isNullOrEmpty()) {
+                    return RemoteViews(sizes.associateWith { createDeckViews(context, deckData, it) })
+                }
+            }
+            // Older launchers report a size range: landscape is shorter, portrait is taller.
+            return RemoteViews(
+                createDeckViews(
+                    context,
+                    deckData,
+                    SizeF(
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH).toFloat(),
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT).toFloat(),
+                    ),
+                ),
+                createDeckViews(
+                    context,
+                    deckData,
+                    SizeF(
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH).toFloat(),
+                        options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT).toFloat(),
+                    ),
+                ),
+            )
+        }
+
+        private suspend fun createDeckViews(
+            context: Context,
+            deckData: List<DeckWidgetData>,
+            size: SizeF,
+        ): RemoteViews {
+            val remoteViews = RemoteViews(context.packageName, R.layout.widget_deck_picker_large)
+            val density = context.resources.displayMetrics.density
+            val widthSpec =
+                MeasureSpec.makeMeasureSpec(
+                    (size.width * density).roundToInt(),
+                    if (size.width > 0) MeasureSpec.EXACTLY else MeasureSpec.UNSPECIFIED,
+                )
+            // Some hosts do not supply dimensions until the first resize.
+            val availableHeight = if (size.height > 0) size.height * density else Float.POSITIVE_INFINITY
+            var usedHeight = 0
             remoteViews.removeAllViews(R.id.deckCollection)
-            val deckData = getDeckNamesAndStats(deckIds.toList())
             for (deck in deckData) {
                 val deckView = RemoteViews(context.packageName, R.layout.widget_item_deck_main)
 
@@ -141,13 +176,24 @@ class DeckPickerWidget : AnalyticsWidgetProvider() {
                 deckView.setTextViewText(R.id.deckDue, deck.reviewCount.toString())
                 deckView.setTextViewText(R.id.deckLearn, deck.learnCount.toString())
 
+                // Measure the same content and layout the launcher will render, including
+                // font scaling, fallback fonts (such as emoji), and vertical padding.
+                val row = deckView.apply(context, null)
+                row.measure(widthSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+                if (usedHeight + row.measuredHeight > availableHeight) {
+                    if (usedHeight > 0) break
+                    // Keep one usable row when a large font cannot fit at the minimum widget height.
+                    deckView.fitSingleRow(row, widthSpec, availableHeight.toInt())
+                }
+                usedHeight += row.measuredHeight
+
                 val isEmptyDeck = deck.newCount == 0 && deck.reviewCount == 0 && deck.learnCount == 0
 
                 val intent =
                     if (!isEmptyDeck) {
-                        intentToReviewDeckFromShortcuts(context, deck.deckId)
+                        with(DeferredNavigation) { ReviewDeckDestination.ExternalLaunch(deck.deckId).toIntent() }
                     } else {
-                        DeckOptionsDestination.fromDeckId(deck.deckId).toIntent(context)
+                        with(DeferredNavigation) { DeckOptionsDestination.fromDeckId(deck.deckId).toIntent() }
                     }
 
                 val pendingIntent =
@@ -158,11 +204,42 @@ class DeckPickerWidget : AnalyticsWidgetProvider() {
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
 
-                deckView.setOnClickPendingIntent(R.id.deckName, pendingIntent)
+                deckView.setOnClickPendingIntent(R.id.widget_deck_row, pendingIntent)
                 remoteViews.addView(R.id.deckCollection, deckView)
             }
 
-            appWidgetManager.updateAppWidget(appWidgetId, remoteViews)
+            return remoteViews
+        }
+
+        /** Shrink the first row only when its configured text size cannot fit in the widget. */
+        private fun RemoteViews.fitSingleRow(
+            row: View,
+            widthSpec: Int,
+            height: Int,
+        ) {
+            val textViews = listOf(R.id.deckName, R.id.deckNew, R.id.deckLearn, R.id.deckDue).map { row.findViewById<TextView>(it) }
+            val originalSizes = textViews.map { it.textSize }
+            val largestTextSize = originalSizes.max()
+
+            fun measureAtScale(scale: Float) {
+                textViews.zip(originalSizes).forEach { (view, textSize) ->
+                    view.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize * scale)
+                }
+                row.measure(widthSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+            }
+
+            // Find the largest fitting scale to within one pixel, preserving the relative text sizes.
+            var minScale = 0f
+            var maxScale = 1f
+            while ((maxScale - minScale) * largestTextSize > 1f) {
+                val scale = (minScale + maxScale) / 2
+                measureAtScale(scale)
+                if (row.measuredHeight <= height) minScale = scale else maxScale = scale
+            }
+            measureAtScale(minScale)
+            for (view in textViews) {
+                setTextViewTextSize(view.id, TypedValue.COMPLEX_UNIT_PX, view.textSize)
+            }
         }
 
         private fun showEmptyCollection(
@@ -240,6 +317,16 @@ class DeckPickerWidget : AnalyticsWidgetProvider() {
         }
     }
 
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        onUpdate(context, appWidgetManager, intArrayOf(appWidgetId))
+    }
+
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
         DayRolloverAlarm.scheduleNext(context)
@@ -249,7 +336,6 @@ class DeckPickerWidget : AnalyticsWidgetProvider() {
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: AppWidgetIds,
-        usageAnalytics: UsageAnalytics,
     ) {
         Timber.d("Performing widget update for appWidgetIds: %s", appWidgetIds)
 

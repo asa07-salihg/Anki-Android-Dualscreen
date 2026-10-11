@@ -6,46 +6,24 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="check_db_warning">This may take a long time. Proceed?</string>
-    <string name="contextmenu_deckpicker_delete_deck" maxLength="28">دەستە ئۆچۈر</string>
+    <string name="check_db_warning">بۇنىڭغا ئۇزۇن ۋاقىت كېتىشى مۇمكىن. داۋاملاشتۇرامدۇ؟</string>
     <string name="delete_deck_title">دەستە ئۆچۈرەمدۇ؟</string>
     <plurals name="delete_deck_message">
         <item quantity="one">%1$s دىكى ھەممە كارتىنى ئۆچۈرەمدۇ؟ ئۇنىڭدا %2$d كارتا بار</item>
@@ -70,7 +48,7 @@
     <string name="custom_study_new_extend">بۈگۈنكى يېڭى كارتا چېكىنى («3-»)ئاشۇرىدۇ/كېمەيتىدۇ</string>
     <string name="custom_study_rev_extend">بۈگۈنكى تەكرارلايدىغان كارتا چېكىنى («3-»)ئاشۇرىدۇ/كېمەيتىدۇ</string>
     <string name="custom_study_forgotten">ئۆتكەن x كۈندە ئۇنتۇلغان كارتىنى تەكرارلايدۇ:</string>
-    <string name="custom_study_ahead">ئالدىن تەكرارلاش ۋاقتى x كۈنى:</string>
+    <string name="custom_study_ahead_description">كېيىنكى كارتىنى تەكرارلاش مۆھلىتى:</string>
     <string name="custom_study_preview">يېقىنقى x كۈندە قوشقان يېڭى كارتىنى ئالدىن كۆزىتىدۇ:</string>
     <string name="custom_study_tags">دەستىدىن x كارتا تاللىنىدۇ:</string>
     <string name="storage_full_title">ساقلىغۇچ لىق</string>
@@ -82,16 +60,17 @@
     <string name="restore_backup_choose_another">باشقىسى تاللىنىدۇ</string>
     <string name="dialog_cancel">ۋاز كەچ</string>
     <string name="dialog_ok">جەزملە</string>
-    <string name="dialog_add" comment="Positive dialog action button label to add \'something\'">Add</string>
-    <string name="restore">Restore</string>
+    <string name="dialog_add" comment="Positive dialog action button label to add \'something\'">قوش</string>
+    <string name="restore">ئەسلىگە كەلتۈر</string>
     <string name="dialog_confirm" tools:ignore="UnusedResources">جەزملە</string>
     <string name="dialog_no">ياق</string>
     <string name="dialog_yes">ھەئە</string>
     <string name="dialog_keep">ساقلاپ قال</string>
     <string name="dialog_remove">چىقىرىۋەت</string>
-    <string name="dialog_exit" comment="Label for a button which will exit/finish the current screen">Exit</string>
+    <string name="dialog_exit" comment="Label for a button which will exit/finish the current screen">چېكىن</string>
     <string name="dialog_continue">داۋاملاشتۇر</string>
     <string name="dialog_processing">بىر تەرەپ قىلىۋاتىدۇ&#8230;</string>
+    <string name="dialog_allow">يول قوي</string>
     <string name="dialog_positive_create" comment="Create a new collection, probably erasing the previous one, may be necessary in case of error.">قۇر</string>
     <string name="dialog_positive_delete" maxLength="28">ئۆچۈر</string>
     <!-- Currently unsued, should be useful in the future -->
@@ -104,10 +83,10 @@
     <string name="dialog_invalid_custom_certificate_title">گۇۋاھنامە يېشىش خاتالىقى</string>
     <string name="dialog_updated_custom_certificate">گۇۋاھنامە يېڭىلاندى</string>
     <!-- Media checking -->
-    <string name="check_media_warning">This may take a long time with large media collections. Proceed?</string>
+    <string name="check_media_warning">چوڭ ۋاسىتە توپلىمىغا ئۇزۇن ۋاقىت كېتىشى مۇمكىن. داۋاملاشتۇرامدۇ؟</string>
     <string name="check_media_message">ۋاسىتە تەكشۈرۈۋاتىدۇ&#8230;</string>
     <string name="check_media_adding_missing_tag">بەلگە قوش&#8230;</string>
-    <string name="check_media_tags_added">بەلگە قوشۇلدى</string>
+    <string name="check_media_tags_added">بەلگە قويۇش نەتىجىسى</string>
     <string name="delete_media_message">ۋاسىتە ئۆچۈرۈۋاتىدۇ&#8230;</string>
     <string name="delete_media_result_title">ئۆچۈرۈش نەتىجىسى</string>
     <plurals name="delete_media_result_message">
@@ -126,7 +105,7 @@
     <!-- Multimedia - Audio View -->
     <string name="multimedia_editor_audio_permission_denied">ئاۋاز خاتىرىلەش ئىجازىتى رەت قىلىندى</string>
     <string name="permission_denied">ئىجازەت رەت قىلىندى</string>
-    <string name="recording_permission_denied_message">مىكروفون ئىجازىتى «ئاۋاز خاتىرىلەش» ئىقتىدارى ئۈچۈن زۆرۈر. ئەپ تەڭشىكىدە ئىجازەت بېرىڭ.</string>
+    <string name="microphone_permission_denied_message">مىكروفون ئىجازىتى رەت قىلىندى. ئەپ تەڭشىكىدە ئىجازەت بېرىڭ.</string>
     <!-- Database Integrity Check -->
     <string name="integrity_check_continue_anyway">داۋاملاشتۇرۇۋەر</string>
     <string name="integrity_check_insufficient_space">ساندان تەكشۈرۈشكە ئىشلىتىدىغان ۋاقىتلىق بوشلۇق چوڭ.\n\nداۋاملاشتۇرۇشتىن ئىلگىرى ئۈسكۈنىڭىزدە كەم دېگەندە %s ئەركىن بوشلۇق بولۇشىنى كۈچلۈك تەۋسىيە قىلىمىز.</string>
@@ -268,15 +247,22 @@
     <string name="error_no_changes_to_save">ساقلايدىغان ئۆزگىرىش يوق</string>
     <string name="choose_color">رەڭ تاللىنىدۇ</string>
     <!-- Special Fields -->
-    <string name="standard_fields_tab_header" comment="Tab header for inserting non-special fields: {{Front}}">Fields</string>
-    <string name="special_fields_tab_header" comment="Tab header for inserting special fields: {{Deck}}">Special</string>
-    <string name="special_field_example_suffix"><![CDATA[: ‘<b>%1$s</b>’]]></string>
-    <string name="special_field_front_side_help">The front template content. Audio is not automatically played</string>
-    <string name="special_field_deck_help" comment="%s: either blank or \' %s\'">The full deck of the card, including parent decks%s</string>
-    <string name="special_field_subdeck_help" comment="%s: either blank or \' %s\'">The current deck of the card, excluding parent decks%s</string>
-    <string name="special_field_flag_help">Outputs ‘%1$s’, where %2$s is the flag code (%3$s\–%4$s\)</string>
-    <string name="special_field_tags_help" comment="%s: either blank or \' %s\'">The tags of the note%s</string>
-    <string name="special_field_card_id_help" comment="%s: either blank or \' %s\'">The ID of the card%s</string>
-    <string name="special_field_card_help" comment="%s: either blank or \' %s\'">The name of the card template%s</string>
-    <string name="special_field_type_help" comment="%s: either blank or \' %s\'">The name of the note type%s</string>
+    <string name="standard_fields_tab_header" comment="Tab header for inserting non-special fields: {{Front}}">بۆلەك</string>
+    <string name="special_fields_tab_header" comment="Tab header for inserting special fields: {{Deck}}">ئالاھىدە</string>
+    <string name="special_field_example_suffix"><![CDATA[: «<b>%1$s</b>»]]></string>
+    <string name="special_field_front_side_help">ئالدى قېلىپ مەزمۇنى. ئاۋاز ئۆزلۈكىدىن ياڭرىتىلمايدۇ</string>
+    <string name="special_field_deck_help" comment="%s: either blank or \' %s\'">كارتىنىڭ تولۇق دەستىسى، ئاتا دەستە %s نى ئۆز ئىچىگە ئالىدۇ</string>
+    <string name="special_field_subdeck_help" comment="%s: either blank or \' %s\'">كارتىنىڭ نۆۋەتتىكى دەستىسى، ئاتا دەستە %s بۇنىڭ سىرتىدا</string>
+    <string name="special_field_flag_help">چىقىرىش «%1$s»، بۇنىڭدىكى %2$s بەلگە كودى  (%3$s\–%4$s\)</string>
+    <string name="special_field_tags_help" comment="%s: either blank or \' %s\'">خاتىرە %s نىڭ بەلگىسى</string>
+    <string name="special_field_card_id_help" comment="%s: either blank or \' %s\'">كارتا %s نىڭ كىملىكى</string>
+    <string name="special_field_card_help" comment="%s: either blank or \' %s\'">كارتا قېلىپى %s نىڭ ئىسمى</string>
+    <string name="special_field_type_help" comment="%s: either blank or \' %s\'">خاتىرە تۈرى %s نىڭ ئىسمى</string>
+    <!-- Change Note Type Dialog -->
+    <string name="change_note_type_from" comment="Label indicating the original note type before changing it">نەدىن</string>
+    <string name="change_note_type_to" comment="Label indicating the new note type to change to">نەگە</string>
+    <!-- Add profile dialog -->
+    <string name="profile_name" comment="Label of the text field where the user types the name of a new profile">تەرجىمىھال ئىسمى</string>
+    <string name="profile_name_empty_error" comment="Error shown when the user leaves the profile name empty">تەرجىمىھال ئىسمى بوش قالمايدۇ</string>
+    <string name="profile_name_too_long_error" comment="Error shown when a profile name exceeds the maximum length. %1$d is the maximum number of characters">تەرجىمىھال ئىسمى چوقۇم %1$d ھەر ياكى ئۇنىڭدىن قىسقا بولىدۇ</string>
 </resources>

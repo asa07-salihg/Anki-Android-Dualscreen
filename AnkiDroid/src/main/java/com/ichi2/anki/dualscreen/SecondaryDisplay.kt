@@ -65,7 +65,7 @@ import androidx.core.view.allViews
 import androidx.core.view.forEach
 import androidx.core.widget.TextViewCompat
 import com.ichi2.anki.R
-import com.ichi2.anki.preferences.sharedPrefs
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.themes.Themes
 import timber.log.Timber
 import kotlin.math.abs
@@ -73,6 +73,7 @@ import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sign
+import com.ichi2.anki.common.android.R as CommonR
 
 internal const val DISABLED_ALPHA = 0.4f
 private const val MENU_ICON_DP = 24
@@ -625,7 +626,7 @@ private class FocusHighlight {
 private class HighlightDrawable(
     context: Context,
 ) : Drawable() {
-    private val color = ContextCompat.getColor(context, R.color.material_light_blue_900)
+    private val color = ContextCompat.getColor(context, CommonR.color.material_light_blue_900)
     var isOnDarkBackground = false
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val rect = RectF()

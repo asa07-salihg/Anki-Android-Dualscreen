@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2025 Brayan Oliveira <69634269+brayandso@users.noreply.github.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program. If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.ui.windows.reviewer.whiteboard
 
 import android.annotation.SuppressLint
@@ -20,6 +7,7 @@ import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -42,6 +30,7 @@ import com.ichi2.anki.DispatchKeyEventListener
 import com.ichi2.anki.R
 import com.ichi2.anki.android.back.doubleBackPressCallback
 import com.ichi2.anki.cardviewer.Gesture
+import com.ichi2.anki.common.utils.android.systemIsInNightMode
 import com.ichi2.anki.compat.CompatHelper.Companion.compat
 import com.ichi2.anki.databinding.FragmentWhiteboardBinding
 import com.ichi2.anki.databinding.PopupBrushOptionsBinding
@@ -51,11 +40,11 @@ import com.ichi2.anki.reviewer.BindingMap
 import com.ichi2.anki.reviewer.ReviewerBinding
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.utils.ext.sharedPrefs
-import com.ichi2.themes.Themes
 import com.ichi2.utils.dp
 import com.ichi2.utils.increaseHorizontalPaddingOfMenuIcons
 import com.ichi2.utils.toRGBAHex
 import dev.androidbroadcast.vbpd.viewBinding
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -89,7 +78,7 @@ class WhiteboardFragment :
     ) {
         super.onViewCreated(view, savedInstanceState)
 
-        val isNightMode = Themes.systemIsInNightMode(requireContext())
+        val isNightMode = systemIsInNightMode(requireContext())
         viewModel.loadState(isNightMode)
 
         setupUI()
@@ -103,23 +92,38 @@ class WhiteboardFragment :
     }
 
     private fun setupDoubleBackPress() {
-        val isUsingGesturesNavigation = context?.let { compat.isUsingSystemGestureNavigation(it) } == true
         doubleBackCallback =
             doubleBackPressCallback(
-                enabled = !isHidden && isUsingGesturesNavigation,
+                enabled = computeDoubleBackEnabled(),
                 onFirstBack = { showSnackbar(R.string.back_pressed_once, Snackbar.LENGTH_SHORT) },
-                shouldReEnable = {
-                    !isHidden && isUsingGesturesNavigation
-                },
+                shouldReEnable = { computeDoubleBackEnabled() },
             ).also {
                 requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, it)
             }
+        // Keep the callback in sync as the inputs change (host toggling drawing mode,
+        // hidden state changes from the reviewer's show/hide transactions).
+        viewModel.isDrawing
+            .onEach { doubleBackCallback?.isEnabled = computeDoubleBackEnabled() }
+            .launchIn(viewLifecycleOwner.lifecycleScope)
+    }
+
+    private fun computeDoubleBackEnabled(): Boolean {
+        val isUsingGesturesNavigation = context?.let { compat.isUsingSystemGestureNavigation(it) } == true
+        return !viewModel.isDrawing.value && !isHidden && isUsingGesturesNavigation
     }
 
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
-        val isUsingGesturesNavigation = context?.let { compat.isUsingSystemGestureNavigation(it) } == true
-        doubleBackCallback?.isEnabled = !hidden && isUsingGesturesNavigation
+        doubleBackCallback?.isEnabled = computeDoubleBackEnabled()
+    }
+
+    /**
+     * Switches the whiteboard into "drawing" mode, where the host owns back
+     * navigation (e.g. a discard-changes dialog) and the reviewer's "go back again
+     * to exit" snackbar is suppressed.
+     */
+    fun setDrawingMode(drawing: Boolean) {
+        viewModel.isDrawing.value = drawing
     }
 
     private fun setupUI() {
@@ -177,8 +181,8 @@ class WhiteboardFragment :
             }
         }
 
-        viewModel.canUndo.onEach { toolbar.undoButton.isEnabled = it }.launchIn(lifecycleScope)
-        viewModel.canRedo.onEach { toolbar.redoButton.isEnabled = it }.launchIn(lifecycleScope)
+        viewModel.canUndo.onEach { toolbar.undoButton.isEnabled = it }.launchIn(viewLifecycleOwner.lifecycleScope)
+        viewModel.canRedo.onEach { toolbar.redoButton.isEnabled = it }.launchIn(viewLifecycleOwner.lifecycleScope)
 
         binding.whiteboardToolbar.onToolbarVisibilityChanged = { isShown ->
             viewModel.setIsToolbarShown(isShown)
@@ -216,14 +220,14 @@ class WhiteboardFragment :
     private fun observeViewModel(whiteboardView: WhiteboardView) {
         val toolbar = binding.whiteboardToolbar
 
-        viewModel.paths.onEach(whiteboardView::setHistory).launchIn(lifecycleScope)
+        viewModel.paths.onEach(whiteboardView::setHistory).launchIn(viewLifecycleOwner.lifecycleScope)
 
         combine(
             viewModel.brushColor,
             viewModel.activeStrokeWidth,
         ) { color, width ->
             whiteboardView.setCurrentBrush(color, width)
-        }.launchIn(lifecycleScope)
+        }.launchIn(viewLifecycleOwner.lifecycleScope)
 
         combine(
             viewModel.isEraserActive,
@@ -236,42 +240,42 @@ class WhiteboardFragment :
             if (!isActive) {
                 eraserPopup?.dismiss()
             }
-        }.launchIn(lifecycleScope)
+        }.launchIn(viewLifecycleOwner.lifecycleScope)
 
         viewModel.brushes
             .onEach { brushesInfo ->
                 toolbar.setBrushes(brushesInfo, viewModel.activeBrushIndex.value, viewModel.isEraserActive.value)
-            }.launchIn(lifecycleScope)
+            }.launchIn(viewLifecycleOwner.lifecycleScope)
 
         viewModel.activeBrushIndex
             .onEach {
                 toolbar.updateSelection(it, viewModel.isEraserActive.value)
-            }.launchIn(lifecycleScope)
+            }.launchIn(viewLifecycleOwner.lifecycleScope)
 
         viewModel.isEraserActive
             .onEach {
                 toolbar.updateSelection(viewModel.activeBrushIndex.value, it)
-            }.launchIn(lifecycleScope)
+            }.launchIn(viewLifecycleOwner.lifecycleScope)
 
         viewModel.isStylusOnlyMode
             .onEach { isEnabled ->
                 whiteboardView.isStylusOnlyMode = isEnabled
-            }.launchIn(lifecycleScope)
+            }.launchIn(viewLifecycleOwner.lifecycleScope)
 
         viewModel.toolbarAlignment
             .onEach { alignment ->
                 toolbar.setAlignment(alignment)
                 updateToolbarPosition(alignment)
-            }.launchIn(lifecycleScope)
+            }.launchIn(viewLifecycleOwner.lifecycleScope)
 
         viewModel.isToolbarShown
             .onEach { isShown ->
                 if (isShown) {
-                    showToolbar()
+                    toolbar.show()
                 } else {
-                    hideToolbar()
+                    toolbar.hide()
                 }
-            }.launchIn(lifecycleScope)
+            }.launchIn(viewLifecycleOwner.lifecycleScope)
     }
 
     /**
@@ -346,7 +350,15 @@ class WhiteboardFragment :
 
         brushConfigPopup =
             PopupWindow(popupBrushBinding.root, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, true)
-        brushConfigPopup?.elevation = resources.getDimension(R.dimen.study_screen_elevation)
+
+        val typedValue = TypedValue()
+        val hasAttr = requireContext().theme.resolveAttribute(R.attr.studyScreenElevation, typedValue, true)
+        brushConfigPopup?.elevation =
+            if (hasAttr && typedValue.type == TypedValue.TYPE_DIMENSION) {
+                typedValue.getDimension(resources.displayMetrics)
+            } else {
+                0f
+            }
         brushConfigPopup?.setOnDismissListener {
             brushConfigPopup = null
         }
@@ -431,18 +443,6 @@ class WhiteboardFragment :
         }
     }
 
-    private fun showToolbar() {
-        binding.whiteboardToolbar.post {
-            binding.whiteboardToolbar.show()
-        }
-    }
-
-    private fun hideToolbar() {
-        binding.whiteboardToolbar.post {
-            binding.whiteboardToolbar.hide()
-        }
-    }
-
     override fun onMenuItemClick(item: MenuItem): Boolean {
         Timber.i("WhiteboardFragment::onMenuItemClick %s", item.title)
         when (item.itemId) {
@@ -476,4 +476,15 @@ class WhiteboardFragment :
      * @return whether the whiteboard is completely empty, including the undo and redo stacks.
      */
     fun isEmpty(): Boolean = !viewModel.canUndo.value && !viewModel.canRedo.value
+
+    /**
+     * Emits `true` when the whiteboard is empty (cannot undo or redo) and `false` otherwise.
+     * Useful for hosts that need to react to content changes, e.g. to toggle a back-press
+     * callback's `isEnabled`.
+     */
+    val isEmptyFlow: Flow<Boolean>
+        get() =
+            combine(viewModel.canUndo, viewModel.canRedo) { canUndo, canRedo ->
+                !canUndo && !canRedo
+            }
 }

@@ -22,18 +22,20 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 1
+          fetch-depth: 2
 
       - name: Configure JDK
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
         with:
-          distribution: "temurin"
+          distribution: "jetbrains"
           java-version: "21"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         timeout-minutes: 5
         with:
           # Use open source provider: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md#basic-caching
@@ -43,6 +45,15 @@ jobs:
           # Comment this and the with: above out for performance testing on a branch
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
+      - name: Test build logic
+        run: ./gradlew -p buildSrc test --daemon
+
+      # Reject versionCode decreases and increases over 100,000.
+      - name: Validate versionCode
+        env:
+          VERSION_CODE_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: tools/validate-version-code.sh "$VERSION_CODE_BASE"
+
       - name: Warm Gradle Cache
         # This makes sure we fetch gradle network resources with a retry
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
@@ -50,16 +61,12 @@ jobs:
           timeout_minutes: 10
           retry_wait_seconds: 60
           max_attempts: 3
-          command: ./gradlew :AnkiDroid:compilePlayDebugJavaWithJavac compileLint lint-rules:compileTestJava --daemon
+          command: ./gradlew :AnkiDroid:compileFullDebugJavaWithJavac compileLint lint-rules:compileTestJava --daemon
 
       - name: Run Lint Debug
-        # "lint" is run under the 'Amazon' flavor, so slow in CI
-        # "lintPlayRelease" doesn't test androidTest
-        # "lintPlayDebug" doesn't test the API
-        # "lintVitalFullRelease": if `main` resources are only used in `androidTest` (#15741)
-
+        # "lintAll" opts in all modules in 1 flavor to lint, pinning :AnkiDroid to lintFullDebug
         # update workflows/README.md when modifying this line
-        run: ./gradlew lintPlayDebug :api:lintDebug :libanki:lintDebug ktLintCheck lintVitalFullRelease lint-rules:test --daemon
+        run: ./gradlew lintAll ktlintCheck lint-rules:test --daemon
 
   # update workflows/README.md when modifying commands
   lintJavascript:
@@ -67,7 +74,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 

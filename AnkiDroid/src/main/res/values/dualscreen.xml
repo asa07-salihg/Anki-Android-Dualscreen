@@ -11,6 +11,10 @@
     <string name="dual_screen_space">Space</string>
     <string name="dual_screen_backspace">Backspace</string>
     <string name="dual_screen_shift">Shift</string>
+    <string name="dual_screen_decks">Decks</string>
+    <string name="dual_screen_statistics">Statistics</string>
+    <string name="dual_screen_mark">Mark note</string>
+    <string name="dual_screen_flag">Flag card</string>
     <string name="dual_screen_symbols" translatable="false">\?123</string>
     <string name="dual_screen_controls">Controller</string>
     <string name="dual_screen_button_a" translatable="false">A</string>

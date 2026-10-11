@@ -1,21 +1,8 @@
-/*
- *  Copyright (c) 2026 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
 
 package com.ichi2.anki.browser.search
 
+import android.content.Context
 import android.os.Bundle
 import android.os.Parcelable
 import android.view.LayoutInflater
@@ -23,7 +10,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.DrawableRes
 import androidx.core.os.BundleCompat
-import androidx.core.os.bundleOf
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.RecyclerView
@@ -128,6 +114,7 @@ class FlagsBottomSheetFragment : BottomSheetDialogFragment(R.layout.fragment_bot
         ) {
             val model = this.states[position]
             holder.binding.text.text = model.label
+            holder.binding.checkbox.contentDescription = model.label
             holder.binding.icon.setImageResource(model.flag.drawableRes)
             // TODO: Long press to rename
             holder.binding.root.setOnClickListener { onItemClickedListener(model.flag) }
@@ -166,17 +153,17 @@ class FlagsBottomSheetFragment : BottomSheetDialogFragment(R.layout.fragment_bot
         const val TAG = "FlagsBottomSheetFragment"
         private const val ARG_FLAGS = "flagData"
 
-        suspend fun createInstance(): FlagsBottomSheetFragment =
+        suspend fun createInstance(context: Context): FlagsBottomSheetFragment =
             FlagsBottomSheetFragment().apply {
                 Timber.d("Building 'FlagsBottomSheetFragment' dialog")
 
-                val userDefinedNames = Flag.queryDisplayNames()
+                val userDefinedNames = Flag.queryDisplayNames(context)
                 val flags =
                     Flag.entries.map {
                         FlagUiModel(it, label = userDefinedNames.getValue(it))
                     }
 
-                arguments = bundleOf(ARG_FLAGS to ArrayList(flags))
+                arguments = Bundle().apply { putParcelableArrayList(ARG_FLAGS, ArrayList(flags)) }
             }
     }
 }

@@ -1,0 +1,190 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2026 Ashish Yadav <mailtoashish693@gmail.com>
+package com.ichi2.anki.progress
+
+import android.os.Looper
+import android.widget.TextView
+import androidx.fragment.app.DialogFragment
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.R
+import com.ichi2.anki.RobolectricTest
+import com.ichi2.anki.dialogs.LoadingDialogFragment
+import com.ichi2.testutils.EmptyAnkiActivity
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.android.controller.ActivityController
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.toJavaDuration
+
+@RunWith(AndroidJUnit4::class)
+class ProgressObserverTest : RobolectricTest() {
+    private val progressManager = ProgressManager<String>()
+    private val viewModel =
+        object : HasProgress<String> {
+            override val progressManager = this@ProgressObserverTest.progressManager
+        }
+
+    @Test
+    fun `dialog appears after the delay and is dismissed when the op ends`() {
+        val controller = startActivity()
+        val activity = controller.get()
+        activity.observeProgress(viewModel, delayMillis = SHOW_DELAY) { it }
+
+        val gate = CompletableDeferred<Unit>()
+        val op = launchOp(gate)
+        idleMainLooper(SHOW_DELAY / 2)
+        assertNull(activity.loadingDialog(), "dialog must not show before the delay elapses")
+
+        idleMainLooper(SHOW_DELAY)
+        assertNotNull(activity.loadingDialog(), "dialog must show once the delay elapses")
+
+        gate.complete(Unit)
+        idleMainLooper(SHOW_DELAY)
+        assertNull(activity.loadingDialog(), "dialog must be dismissed once the op ends")
+        op.cancel()
+    }
+
+    @Test
+    fun `dialog is not shown for an op that ends within the delay`() {
+        val controller = startActivity()
+        val activity = controller.get()
+        activity.observeProgress(viewModel, delayMillis = SHOW_DELAY) { it }
+
+        val gate = CompletableDeferred<Unit>()
+        val op = launchOp(gate)
+        idleMainLooper(SHOW_DELAY / 2)
+        gate.complete(Unit)
+
+        idleMainLooper(SHOW_DELAY * 2)
+        assertNull(activity.loadingDialog(), "a quick op must not flash a dialog")
+        op.cancel()
+    }
+
+    @Test
+    fun `dialog is shown when the activity is stopped and restarted during the show delay`() {
+        val controller = startActivity()
+        val activity = controller.get()
+        activity.observeProgress(viewModel, delayMillis = SHOW_DELAY) { it }
+
+        val gate = CompletableDeferred<Unit>()
+        val op = launchOp(gate)
+        idleMainLooper(SHOW_DELAY / 2)
+        assertNull(activity.loadingDialog(), "dialog must not show before the delay elapses")
+
+        // stopping cancels the pending show; the op is still running when the activity comes back
+        controller.pause().stop()
+        controller.start().resume()
+        idleMainLooper(SHOW_DELAY * 2)
+
+        assertNotNull(activity.loadingDialog(), "dialog must show after the activity restarts mid-op")
+
+        gate.complete(Unit)
+        idleMainLooper(SHOW_DELAY)
+        assertNull(activity.loadingDialog(), "dialog must be dismissed once the op ends")
+        op.cancel()
+    }
+
+    @Test
+    fun `the message is resolved into the dialog text`() {
+        val controller = startActivity()
+        val activity = controller.get()
+        activity.observeProgress(viewModel, delayMillis = SHOW_DELAY) { message ->
+            getString(R.string.progress_amount_bytes, message, "2 MB")
+        }
+
+        val gate = CompletableDeferred<Unit>()
+        val op = launchOp(gate, message = "1 MB")
+        idleMainLooper(SHOW_DELAY * 2)
+
+        assertEquals("1 MB/2 MB", activity.loadingDialogText())
+
+        gate.complete(Unit)
+        op.cancel()
+    }
+
+    @Test
+    fun `newInstance respects cancellable flag`() {
+        val nonCancellable = LoadingDialogFragment.newInstance("msg", cancellable = false)
+        assertEquals(false, nonCancellable.isCancelable)
+
+        val cancellable = LoadingDialogFragment.newInstance("msg", cancellable = true)
+        assertEquals(true, cancellable.isCancelable)
+    }
+
+    @Test
+    fun `dialog is not cancellable when op does not provide onCancel`() {
+        val controller = startActivity()
+        val activity = controller.get()
+        activity.observeProgress(viewModel, delayMillis = SHOW_DELAY) { it }
+
+        val gate = CompletableDeferred<Unit>()
+        val op = launchOp(gate)
+        idleMainLooper(SHOW_DELAY * 2)
+
+        val dialogFragment = activity.loadingDialog() as? DialogFragment
+        assertNotNull(dialogFragment)
+        assertEquals(false, dialogFragment.isCancelable)
+
+        gate.complete(Unit)
+        idleMainLooper(SHOW_DELAY)
+        op.cancel()
+    }
+
+    @Test
+    fun `dialog is cancellable when op provides onCancel`() {
+        val controller = startActivity()
+        val activity = controller.get()
+        activity.observeProgress(viewModel, delayMillis = SHOW_DELAY) { it }
+
+        val gate = CompletableDeferred<Unit>()
+        val op = launchOp(gate, onCancel = {})
+        idleMainLooper(SHOW_DELAY * 2)
+
+        val dialogFragment = activity.loadingDialog() as? DialogFragment
+        assertNotNull(dialogFragment)
+        assertEquals(true, dialogFragment.isCancelable)
+
+        gate.complete(Unit)
+        idleMainLooper(SHOW_DELAY)
+        op.cancel()
+    }
+
+    private fun launchOp(
+        gate: CompletableDeferred<Unit>,
+        message: String = "op",
+        onCancel: (() -> Unit)? = null,
+    ) = CoroutineScope(Dispatchers.Unconfined).launch {
+        progressManager.withProgress(message = message, onCancel = onCancel) { gate.await() }
+    }
+
+    private fun startActivity(): ActivityController<EmptyAnkiActivity> =
+        Robolectric
+            .buildActivity(EmptyAnkiActivity::class.java)
+            .setup()
+            .also { saveControllerForCleanup(it) }
+
+    private fun EmptyAnkiActivity.loadingDialog() = supportFragmentManager.findFragmentByTag(LoadingDialogFragment.TAG)
+
+    private fun EmptyAnkiActivity.loadingDialogText() =
+        (loadingDialog() as? DialogFragment)
+            ?.dialog
+            ?.findViewById<TextView>(R.id.text)
+            ?.text
+            ?.toString()
+
+    private fun idleMainLooper(duration: Duration) = shadowOf(Looper.getMainLooper()).idleFor(duration.toJavaDuration())
+
+    companion object {
+        private val SHOW_DELAY = 600.milliseconds
+    }
+}

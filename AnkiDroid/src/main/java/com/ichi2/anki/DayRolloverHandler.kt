@@ -1,6 +1,4 @@
 /*
- *  Copyright (c) 2024 David Allison <davidallisongithub@gmail.com>
- *
  *  This program is free software; you can redistribute it and/or modify it under
  *  the terms of the GNU General Public License as published by the Free Software
  *  Foundation; either version 3 of the License, or (at your option) any later
@@ -34,9 +32,11 @@ import androidx.core.content.ContextCompat.RECEIVER_EXPORTED
 import anki.collection.OpChanges
 import anki.collection.opChanges
 import com.ichi2.anki.CollectionManager.withOpenColOrNull
-import com.ichi2.anki.android.AnkiBroadcastReceiver
+import com.ichi2.anki.common.android.AnkiBroadcastReceiver
+import com.ichi2.anki.common.android.appContext
+import com.ichi2.anki.common.coroutines.applicationScope
 import com.ichi2.anki.common.crashreporting.CrashReportService
-import com.ichi2.anki.exception.ManuallyReportedException
+import com.ichi2.anki.common.exception.ManuallyReportedException
 import com.ichi2.anki.libanki.EpochSeconds
 import com.ichi2.anki.libanki.sched.Scheduler
 import com.ichi2.anki.observability.ChangeManager
@@ -82,7 +82,7 @@ object DayRolloverHandler : AnkiBroadcastReceiver() {
         // the outcome would be two calls to notifySubscribers, which is acceptable
         Timber.v("received ${intent.action}")
         // launch coroutine as we need access to `col.sched`
-        AnkiDroidApp.applicationScope.launchCatching(Dispatchers.IO, errorMessageHandler = { msg ->
+        applicationScope.launchCatching(Dispatchers.IO, errorMessageHandler = { msg ->
             CrashReportService.sendExceptionReport(
                 e = ManuallyReportedException(msg),
                 origin = "DayRolloverHandler::onReceive",
@@ -109,7 +109,7 @@ object DayRolloverHandler : AnkiBroadcastReceiver() {
 
         Timber.i("day cutoff changed %d -> %d", lastCutoff, currentCutoff)
         // Re-arm the wall-clock alarm whenever the cutoff changes
-        DayRolloverAlarm.scheduleNext(AnkiDroidApp.instance)
+        DayRolloverAlarm.scheduleNext(appContext)
         // we do not want to send a "study queues changes" message initially
         if (lastCutoff != null) {
             handleDayRollover()
@@ -125,7 +125,7 @@ object DayRolloverHandler : AnkiBroadcastReceiver() {
 
         Timber.i("day rollover: updating widgets")
         try {
-            WidgetStatus.updateInBackground(AnkiDroidApp.instance)
+            WidgetStatus.updateInBackground(appContext)
         } catch (e: Exception) {
             Timber.w(e, "failed to update widgets")
         }

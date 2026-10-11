@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2015 Timothy Rae <perceptualchaos2@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2015 Timothy Rae <perceptualchaos2@gmail.com>
 
 package com.ichi2.anki.dialogs
 
@@ -21,6 +8,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import com.ichi2.anki.R
 import com.ichi2.anki.utils.ext.ifNullOrEmpty
+import com.ichi2.anki.utils.ext.requireString
 import com.ichi2.utils.create
 import com.ichi2.utils.message
 import com.ichi2.utils.negativeButton
@@ -32,11 +20,9 @@ import com.ichi2.utils.title
  * Create a new instance, call setArgs(...), setConfirm(), and setCancel() then show it via the fragment manager as usual.
  */
 class ConfirmationDialog : DialogFragment() {
-    private val message: String
-        get() =
-            requireNotNull(requireArguments().getString(ARG_MESSAGE)) {
-                ARG_MESSAGE
-            }
+    private val message: String by lazy {
+        requireArguments().requireString(ARG_MESSAGE)
+    }
 
     private val title: String
         get() =
@@ -85,16 +71,13 @@ class ConfirmationDialog : DialogFragment() {
         this.cancel = cancel
     }
 
-    override fun onCreateDialog(savedInstanceState: Bundle?): AlertDialog {
-        super.onCreate(savedInstanceState)
-
-        return AlertDialog.Builder(requireContext()).create {
+    override fun onCreateDialog(savedInstanceState: Bundle?): AlertDialog =
+        AlertDialog.Builder(requireContext()).create {
             title(text = title)
             message(text = message)
             positiveButton(text = positiveButtonText) { confirm.run() }
             negativeButton(R.string.dialog_cancel) { cancel.run() }
         }
-    }
 
     companion object {
         /** The dialog message (required) */

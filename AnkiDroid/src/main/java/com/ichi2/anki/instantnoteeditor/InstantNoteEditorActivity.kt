@@ -1,19 +1,5 @@
-/*
- * Copyright (c) 2024 Ashish Yadav <mailtoashish693@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
- * details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2024 Ashish Yadav <mailtoashish693@gmail.com>
 
 package com.ichi2.anki.instantnoteeditor
 
@@ -43,19 +29,21 @@ import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.CustomActionModeCallback
 import com.ichi2.anki.R
+import com.ichi2.anki.common.destinations.NoteEditorDestination
+import com.ichi2.anki.common.destinations.navigate
+import com.ichi2.anki.common.utils.android.showThemedToast
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
 import com.ichi2.anki.databinding.ActivityInstantNoteEditorBinding
 import com.ichi2.anki.databinding.DialogInstantEditorBinding
 import com.ichi2.anki.databinding.ViewInstantEditorFieldBinding
-import com.ichi2.anki.dialogs.DeckSelectionDialog
 import com.ichi2.anki.dialogs.DiscardChangesDialog
+import com.ichi2.anki.dialogs.registerDeckSelectedHandler
+import com.ichi2.anki.dialogs.startDeckSelection
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.libanki.NotetypeJson
 import com.ichi2.anki.model.SelectableDeck
-import com.ichi2.anki.noteeditor.NoteEditorLauncher
 import com.ichi2.anki.servicelayer.NoteService
-import com.ichi2.anki.showThemedToast
-import com.ichi2.anki.startDeckSelection
+import com.ichi2.anki.startup.ensureStorageIsReady
 import com.ichi2.anki.withProgress
 import com.ichi2.themes.setTransparentBackground
 import com.ichi2.utils.AndroidUiUtils.hideKeyboard
@@ -77,9 +65,7 @@ import timber.log.Timber
  * Single instance Activity for instantly editing and adding cloze card/s without actually opening the app,
  * uses a custom dialog layout and a transparent activity theme to achieve the functionality.
  **/
-class InstantNoteEditorActivity :
-    AnkiActivity(R.layout.activity_instant_note_editor),
-    DeckSelectionDialog.DeckSelectionListener {
+class InstantNoteEditorActivity : AnkiActivity(R.layout.activity_instant_note_editor) {
     private val viewModel: InstantEditorViewModel by viewModels()
 
     /**
@@ -115,7 +101,7 @@ class InstantNoteEditorActivity :
             return
         }
         super.onCreate(savedInstanceState)
-        if (!ensureStoragePermissions()) {
+        if (!ensureStorageIsReady()) {
             return
         }
         setTransparentBackground()
@@ -136,6 +122,8 @@ class InstantNoteEditorActivity :
 
         setupErrorListeners()
         prepareEditorDialog()
+
+        registerDeckSelectedHandler(action = ::onDeckSelected)
     }
 
     override fun onDestroy() {
@@ -190,8 +178,7 @@ class InstantNoteEditorActivity :
 
     private fun openNoteEditor() {
         val sharedText = clozeEditTextField.text.toString()
-        val noteEditorIntent = NoteEditorLauncher.AddInstantNote(sharedText).toIntent(this)
-        startActivity(noteEditorIntent)
+        navigate(NoteEditorDestination.AddInstantNote(sharedText))
         finish()
     }
 
@@ -222,7 +209,7 @@ class InstantNoteEditorActivity :
                 setCancelable(false)
                 setFinishOnTouchOutside(false)
                 dialogBinding.spinnerLayout.setOnClickListener {
-                    startDeckSelection(all = false, filtered = false)
+                    startDeckSelection(allowAll = false, allowFiltered = false, skipEmptyDefault = true)
                 }
                 dialogBinding.actionSaveNote.setOnClickListener {
                     Timber.d("Save note button pressed")
@@ -541,7 +528,7 @@ class InstantNoteEditorActivity :
         }
     }
 
-    override fun onDeckSelected(deck: SelectableDeck?) {
+    private fun onDeckSelected(deck: SelectableDeck?) {
         if (deck == null) {
             return
         }

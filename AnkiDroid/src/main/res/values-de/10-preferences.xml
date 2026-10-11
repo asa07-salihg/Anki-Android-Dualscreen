@@ -6,43 +6,22 @@
  ~    Instructions for this are available here: https://github.com/ankidroid/Anki-Android/wiki/Translating-AnkiDroid. 
  ~    You may also find the documentation on contributing to Anki useful: https://github.com/ankidroid/Anki-Android/wiki/Contributing   
  ~ 
- ~ Copyright (c) 2009 Andrew <andrewdubya@gmail> 
- ~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com> 
- ~ Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com> 
- ~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com> 
- ~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com> 
- ~ This program is free software; you can redistribute it and/or modify it under 
- ~ the terms of the GNU General Public License as published by the Free Software 
- ~ Foundation; either version 3 of the License, or (at your option) any later 
- ~ version. 
- ~ 
- ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
- ~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- ~ PARTICULAR PURPOSE. See the GNU General Public License for more details. 
- ~ 
- ~ You should have received a copy of the GNU General Public License along with 
- ~ this program.  If not, see <http://www.gnu.org/licenses/>. 
+ ~ SPDX-License-Identifier: GPL-3.0-or-later
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svaerd <daniel.svard@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+ ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
  -->
  
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Daniel Svärd <daniel.svard@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2010 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- generic strings -->
     <string name="disabled">Deaktiviert</string>
@@ -61,7 +40,6 @@
     <string name="pref_cat_sync" comment="title of the sync preferences category" maxLength="41">Synchronisieren</string>
     <string name="pref_cat_scheduling" maxLength="41">Planen</string>
     <string name="pref_cat_whiteboard" maxLength="41">Whiteboard</string>
-    <string name="pref_cat_appearance" maxLength="41">Erscheinungsbild</string>
     <string name="pref_cat_themes" maxLength="41">Designs</string>
     <string name="pref_cat_gestures" maxLength="41">Gesten</string>
     <string name="pref_cat_controls" maxLength="41">Steuerung</string>
@@ -69,6 +47,15 @@
     <string name="pref_cat_workarounds" maxLength="41">Workarounds</string>
     <string name="pref_cat_plugins" maxLength="41">Plug-Ins</string>
     <string name="pref_cat_editing" maxLength="41">Bearbeitung</string>
+    <string name="pref_cat_security" maxLength="41">Security</string>
+    <!-- Card template JavaScript API permissions -->
+    <string name="allow_dangerous_js_api_title" maxLength="41">Globally allow dangerous JavaScript APIs</string>
+    <string name="allow_dangerous_js_api_summ">Allows any card or template to read and modify other cards, or your Anki collection data.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="dangerous_js_api_denied_snackbar">Security: Unsafe JavaScript call blocked.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
+    <!-- External-app launching from card content (intent: / android-app: URLs) -->
+    <string name="allow_card_external_launch_title" maxLength="41">Allow cards to launch other apps</string>
+    <string name="allow_card_external_launch_summ">Cards can open other apps on your device, triggering potentially unwanted actions.\nLeave off unless you trust all cards and templates in your collection.</string>
+    <string name="card_external_launch_denied_snackbar">Security: Card blocked from launching another app.\nIf you trust all cards and templates in your collection, this can be unblocked in the advanced settings</string>
     <!-- preferences.xml entries-->
     <string name="whiteboard_stroke_width" maxLength="41">Pinselbreite</string>
     <string name="use_input_tag" maxLength="41">Antwort in Karte eintippen</string>
@@ -129,7 +116,6 @@
     <string name="tts_summ">Liest Frage und Antwort vor, wenn keine anderen Sounds enthalten sind</string>
     <!-- Sync -->
     <string name="sync_fetch_missing_media" maxLength="41">Mediadaten synchronisieren</string>
-    <string name="sync_account" maxLength="41">AnkiWeb-Konto</string>
     <string name="sync_account_summ_logged_out">Nicht eingeloggt</string>
     <string name="automatic_sync_choice" maxLength="41">Automatische Synchronisierung</string>
     <string name="automatic_sync_choice_summ">Bei Programmstart/-ende automatisch synchronisieren, falls die letzte Synchronisation mehr als 10 Minuten zurückliegt.</string>
@@ -157,11 +143,9 @@
     <string name="select_locale_title">Sprache wählen</string>
     <string name="software_render" maxLength="41">Karten-Hardware-Rendering deaktivieren</string>
     <string name="software_render_summ">Hardware-Rendering ist schneller, kann aber Probleme haben, insbesondere auf Android 8/8.1. Wenn Sie Teile der Benutzeroberfläche der Karte nicht sehen können, versuchen Sie diese Einstellung.</string>
-    <string name="safe_display" maxLength="41">Sicherer Anzeigemodus</string>
-    <string name="safe_display_summ">Alle Animationen deaktivieren und Karten mit sichererer Methode darstellen. Eventuell erforderlich für E-Ink-Geräte.</string>
-    <string name="disable_extended_text_ui" maxLength="41">Einzelfeldbearbeitungsmodus deaktivieren</string>
+    <string name="disable_extended_text_ui" maxLength="41">Disable single-field edit mode</string>
     <!--See: multimedia_editor_popup_cloze. We can\'t use format strings as this is auto-generated-->
-    <string name="disable_extended_text_ui_summ">Erlaubt im Querformat das Kontextmenü »Auslassung erzeugen«</string>
+    <string name="disable_extended_text_ui_summ">Allows \'Cloze deletion\' context menu when in landscape mode.</string>
     <string name="vertical_centering" maxLength="41">Zentriert</string>
     <string name="vertical_centering_summ">Den Inhalt der Karten vertikal zentrieren</string>
     <string name="pref_double_tap_time_interval" maxLength="41">Zeitintervall für Doppeltippen</string>
@@ -172,6 +156,8 @@
     <string name="show_estimates_summ">Zeigt Zeiten bis zur nächsten Wiederholung auf den Antwortschaltflächen</string>
     <string name="show_large_answer_buttons" maxLength="41">Große Antwortschaltflächen anzeigen</string>
     <string name="show_large_answer_buttons_summ">Antwort-Fläche in 2 Zeilen anzeigen</string>
+    <string name="remove_animations" maxLength="41">Animationen entfernen</string>
+    <string name="remove_animations_summary">Auch Aktiviert wenn Animationen in den Systemeinstellungen entfernt wurden</string>
     <string name="show_top_bar" maxLength="41">Obere Leiste anzeigen</string>
     <string name="show_top_bar_summary">Kartenzähler, Antwort-Timer, Flagge und Markierung in der oberen Leiste anzeigen</string>
     <string name="show_progress" maxLength="41">Fällige anzeigen</string>
@@ -207,8 +193,6 @@
     <string name="pref_cat_reviewer" maxLength="41">Lernbildschirm</string>
     <string name="show_deck_title" maxLength="41">Stapeltitel anzeigen</string>
     <string name="accessibility" maxLength="41">Bedienungshilfen</string>
-    <!-- Paste clipboard image as png option -->
-    <string name="paste_as_png" maxLength="41">Zwischenablage-Bilder als PNG einfügen</string>
     <string name="exit_via_double_tap_back" maxLength="41">Zweimal Zurück drücken, um zurückzugehen</string>
     <string name="exit_via_double_tap_back_summ">Um zu vermeiden, dass Sie den Lernbildschirm oder die App versehentlich verlassen</string>
     <!-- Allow all files in media imports -->
@@ -217,12 +201,13 @@
     <!-- Custom sync server settings -->
     <string name="custom_sync_server_title" maxLength="41">Eigener Synchronisationsserver</string>
     <string name="custom_sync_server_summary_none_of_the_two_servers_used" comment="This summary is shown when neither of the two custom sync servers are used,         which is the default.">Nicht in Gebrauch</string>
-    <string name="custom_sync_server_help2"><![CDATA[        Als Alternative zur Synchronisierung mit AnkiWeb
+    <string name="custom_sync_server_help2"><![CDATA[
+        Als Alternative zur Synchronisierung mit AnkiWeb
         können Sie Ihren eigenen Server zur Synchronisierung verwenden.
         Falls nicht gesetzt, wird der Standard AnkiWeb Server verwendet.
         <a href="%s">Mehr erfahren</a>
         ]]></string>
-    <string name="custom_sync_server_base_url_title" maxLength="41">Sync URL</string>
+    <string name="custom_sync_server_base_url_title" maxLength="41">Synchronisierungs URL</string>
     <string name="custom_sync_certificate_title" maxLength="41">Benutzerdefiniertes Root-Zertifikat (PEM)</string>
     <!-- Key Bindings -->
     <string name="keyboard">Tastatur</string>
@@ -248,7 +233,7 @@
     <string name="analytics_title" maxLength="41">Funktionsnutzung teilen</string>
     <string name="analytics_summ">Sie können zu AnkiDroid beitragen, indem Sie dem Entwicklerteam Einblick gewähren, welche Funktionen Sie verwenden</string>
     <string name="note_editor_replace_newlines" maxLength="41">Zeilenumbrüche durch HTML ersetzen</string>
-    <string name="note_editor_replace_newlines_summ">Beim Bearbeiten einer Karte im Notizeditor alle vorkommenden »&lt;br&gt;« in Zeilenbrüche umwandeln.</string>
+    <string name="note_editor_replace_newlines_summ">In the note editor, convert any instances of &lt;br&gt; to newlines when editing a card.</string>
     <string name="type_in_answer_focus" maxLength="41">Auf »Antwort eingeben« fokussieren</string>
     <string name="type_in_answer_focus_summ">Automatisch im Lernbildschirm auf »Antwort eingeben« fokussieren</string>
     <!-- About -->
@@ -259,7 +244,8 @@
     <string name="license">Lizenz</string>
     <string name="license_description"><![CDATA[AnkiDroid wird unter den <a href=\"%1$s\">GPL-3.0</a> und <a href=\"%2$s\">AGPL-3.0</a> Lizenzen veröffentlicht, wobei der Quellcode <a href=\"%3$s\">auf GitHub</a> verfügbar ist]]></string>
     <string name="other_licenses"><![CDATA[AnkiDroid verwendet auch Bibliotheken und Symbole von Drittanbietern, die unter verschiedenen Open-Source- <a href=\"%1$s\">-Lizenzen</a> lizenziert sind.]]></string>
-    <string name="donate_description"><![CDATA[Sie können AnkiDroid\s Entwicklung mit <a href=\"%1$s\">unterstützen</a>. Jede Spende schätzen wir zutiefst.]]></string>
+    <string name="donate_description"><![CDATA[Sie können AnkiDroid\s Entwicklung mit <a href=\"%1$s\">unterstützen</a>. Jede Spende schätzen wir zutiefst.
+]]></string>
     <!-- Controls -->
     <string name="binding_add_gesture">Geste hinzufügen</string>
     <string name="binding_add_key">Schlüssel hinzufügen</string>
@@ -278,6 +264,10 @@
     <string name="user_action_8" maxLength="28">Benutzerdefinierte Aktion 8</string>
     <string name="user_action_9" maxLength="28">Benutzerdefinierte Aktion 9</string>
     <string name="toggle_auto_advance" maxLength="28">Automatisches Weiterblättern umschalten</string>
+    <string name="enable_auto_advance" maxLength="28">Automatischen Seitenvorschub aktivieren</string>
+    <string name="disable_auto_advance" maxLength="28">Automatischen Vorlauf deaktivieren</string>
+    <string name="enable_voice_recording" maxLength="28">Sprachaufzeichnung aktivieren</string>
+    <string name="disable_voice_recording" maxLength="28">Sprachaufzeichnung deaktivieren</string>
     <!-- Select card side -->
     <string name="card_side_selection_title">Kartenseite auswählen</string>
     <string name="card_side_question">Frage</string>
@@ -292,6 +282,8 @@
     <string name="pref_cat_experimental" maxLength="41" tools:ignore="UnusedResources">Experimentell</string>
     <string name="readtext_deprecation_warn">AnkiDroid hat einen besseren TTS-Mechanismus eingeführt, der mit anderen Anki-Clients kompatibel ist und mehr Stimmen und Verbesserungen bei der Sprachwiedergabe enthält!\n\nBitte aktualisieren Sie so bald wie möglich, da diese Einstellung bald entfernt wird</string>
     <string name="readtext_reviewer_warn" tools:ignore="UnusedResources">Bitte upgraden Sie auf das neue Text-zu-Sprache-Format</string>
+    <string name="allow_templates_to_record_audio" maxLength="41">Allow templates to record audio</string>
+    <string name="template_is_trying_to_record_audio">This template is trying to record audio</string>
     <string name="pref_fixed_port_title" maxLength="41">localStorage im Lernbildschirm</string>
     <string name="pref_fixed_port_summary">Aktiviert JavaScript localStorage durch Verwendung eines festen Server-Ports im Lernbildschirm</string>
     <!-- Developer options -->
@@ -384,5 +376,5 @@
     <string name="flip_and_answer" maxLength="41" comment="Configuration of the \'Answer\' commands to answer the card if on the answer side, and flip it if on the question side">Umdrehen und Antworten</string>
     <!--Keyboard shortcuts dialog-->
     <string name="open_settings" comment="Description of the shortcut that opens the app settings">Einstellungen öffnen</string>
-    <string name="related_settings_title" comment="Title of the section for related settings">Related settings</string>
+    <string name="related_settings_title" comment="Title of the section for related settings">Verwandte Einstellungen</string>
 </resources>

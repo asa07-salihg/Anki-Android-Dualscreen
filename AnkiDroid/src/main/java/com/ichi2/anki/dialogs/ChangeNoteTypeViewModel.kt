@@ -1,19 +1,5 @@
-/*
- *  Copyright (c) 2025 Hari Srinivasan <harisrini21@gmail.com>
- *  Copyright (c) 2025 David Allison <davidallisongithub@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2025 Hari Srinivasan <harisrini21@gmail.com>
 
 package com.ichi2.anki.dialogs
 
@@ -184,9 +170,11 @@ class ChangeNoteTypeViewModel(
     }
 
     /**
-     * Whether [updateTemplateMapping] can be called
+     * Whether template mapping applies to the current conversion
      *
      * Templates may only be updated if the input and output note type are non-cloze
+     *
+     * @see canChangeTemplates
      */
     val canChangeTemplatesFlow by lazy {
         conversionTypeFlow
@@ -279,6 +267,15 @@ class ChangeNoteTypeViewModel(
     val outputNoteType
         get() = outputNoteTypeFlow.value
 
+    /**
+     * Whether template mapping applies to the current conversion: both note types must be regular
+     *
+     * Unlike [canChangeTemplatesFlow], this never lags behind [outputNoteType]
+     */
+    val canChangeTemplates: Boolean
+        get() =
+            ConversionType.fromNoteTypeChange(current = inputNoteType, new = outputNoteType) == ConversionType.REGULAR_TO_REGULAR
+
     init {
         delayedInit {
             inputNoteType = withCol { getNote(noteIds.first()) }.notetype
@@ -329,7 +326,6 @@ class ChangeNoteTypeViewModel(
      * @throws ConfirmModSchemaException if a one-way sync dialog needs to be accepted
      */
     @NeedsTest("one way sync")
-    @NeedsTest("closeDialogFlow")
     fun executeChangeNoteTypeAsync() =
         viewModelScope.async {
             Timber.d("Changing note type from '%s' to '%s'", inputNoteType.name, outputNoteType.name)
@@ -447,7 +443,11 @@ class ChangeNoteTypeViewModel(
         outputTemplateIndex: Int,
         mappedFrom: SelectedIndex,
     ) = viewModelScope.launch {
-        require(canChangeTemplatesFlow.value) { "changing templates was disabled" }
+        // a Spinner may deliver a selection the user didn't make
+        if (!canChangeTemplatesFlow.value) {
+            Timber.w("ignoring template mapping: changing templates is disabled")
+            return@launch
+        }
 
         Timber.d("Updating card mapping: %d -> %s", outputTemplateIndex, mappedFrom)
         val updatedValue = mappedFrom.toNullableInt()

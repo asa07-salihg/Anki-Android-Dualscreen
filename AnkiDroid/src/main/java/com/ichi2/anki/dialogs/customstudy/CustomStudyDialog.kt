@@ -1,19 +1,5 @@
-/*
- * Copyright (c) 2015 Timothy Rae <perceptualchaos2@gmail.com>
- * Copyright (c) 2024 David Allison <davidallisongithub@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2015 Timothy Rae <perceptualchaos2@gmail.com>
 
 package com.ichi2.anki.dialogs.customstudy
 
@@ -22,6 +8,7 @@ import android.app.Dialog
 import android.content.res.Resources
 import android.os.Bundle
 import android.os.Parcelable
+import android.text.InputFilter
 import android.util.TypedValue
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
@@ -35,7 +22,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.annotation.VisibleForTesting.Companion.PRIVATE
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
-import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
@@ -53,6 +39,7 @@ import com.ichi2.anki.R
 import com.ichi2.anki.analytics.AnalyticsDialogFragment
 import com.ichi2.anki.asyncIO
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.common.preferences.sharedPrefs
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
 import com.ichi2.anki.databinding.FragmentCustomStudyBinding
 import com.ichi2.anki.dialogs.customstudy.CustomStudyDialog.Companion.deferredDefaults
@@ -69,11 +56,9 @@ import com.ichi2.anki.dialogs.tags.TagsDialogListener.Companion.ON_SELECTED_TAGS
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.observability.undoableOp
-import com.ichi2.anki.preferences.sharedPrefs
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.ui.NonLeadingZeroInputFilter
 import com.ichi2.anki.ui.internationalization.sentenceCase
-import com.ichi2.anki.ui.internationalization.toSentenceCase
-import com.ichi2.anki.utils.ext.bundleOfNotNull
 import com.ichi2.anki.utils.ext.dismissAllDialogFragments
 import com.ichi2.anki.utils.ext.getIntOrNull
 import com.ichi2.anki.utils.ext.sharedPrefs
@@ -89,6 +74,7 @@ import com.ichi2.utils.setPaddingRelative
 import com.ichi2.utils.textAsIntOrNull
 import com.ichi2.utils.title
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.parcelize.Parcelize
 import net.ankiweb.rsdroid.BackendException
@@ -142,6 +128,9 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
     private val userInputValue: Int?
         get() = binding.detailsEditText2.textAsIntOrNull()
 
+    /** The search for cards to review ahead. Cancelled when the input changes, so only the latest input counts */
+    private var searchJob: Job? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         parentFragmentManager.setFragmentResultListener(ON_SELECTED_TAGS_KEY, this) { _, bundle ->
@@ -149,7 +138,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
             val option = selectedSubDialog ?: return@setFragmentResultListener
             val selectedCardStateIndex = viewModel.selectedCardStateIndex
             if (selectedCardStateIndex == AdapterView.INVALID_POSITION) return@setFragmentResultListener
-            val kind = CustomStudyCardState.entries[selectedCardStateIndex].kind
+            val kind = viewModel.selectedKind
             val cardsAmount = userInputValue ?: 100 // the default value
             launchCustomStudy(option, cardsAmount, kind, tagsToInclude, emptyList())
         }
@@ -179,7 +168,6 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        super.onCreate(savedInstanceState)
         val option = selectedSubDialog
         return if (option == null || !defaultsAreInitialized()) {
             Timber.i("Showing Custom Study main menu")
@@ -297,6 +285,8 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
         binding = FragmentCustomStudyBinding.inflate(requireActivity().layoutInflater)
 
         binding.detailsText1.text = text1
+        // 'review ahead' has a dialog title, so the empty label would only add a blank line
+        binding.detailsText1.isVisible = contextMenuOption != STUDY_AHEAD
         binding.detailsText2.text = text2
 
         binding.cardsStateSelectorLayout.isVisible = contextMenuOption == STUDY_TAGS
@@ -336,10 +326,17 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
             if (contextMenuOption == EXTEND_NEW || contextMenuOption == EXTEND_REV) {
                 inputType = EditorInfo.TYPE_CLASS_NUMBER or EditorInfo.TYPE_NUMBER_FLAG_SIGNED
             }
+            if (contextMenuOption == STUDY_AHEAD) {
+                inputType = EditorInfo.TYPE_CLASS_NUMBER
+                filters += arrayOf(InputFilter.LengthFilter(5), NonLeadingZeroInputFilter)
+                setSuffixText(defaultValue.toInt())
+            }
         }
         val positiveBtnLabel =
             if (contextMenuOption == STUDY_TAGS) {
-                TR.customStudyChooseTags().toSentenceCase(R.string.sentence_choose_tags)
+                TR.sentenceCase.chooseTags
+            } else if (contextMenuOption == STUDY_AHEAD) {
+                getString(R.string.dialog_positive_create)
             } else {
                 getString(R.string.dialog_ok)
             }
@@ -351,7 +348,11 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
         val dialog =
             AlertDialog
                 .Builder(requireActivity())
-                .customView(
+                .apply {
+                    if (contextMenuOption == STUDY_AHEAD) {
+                        title(text = contextMenuOption.getTitle(resources))
+                    }
+                }.customView(
                     view = binding.root,
                     paddingStart = horizontalPadding,
                     paddingEnd = horizontalPadding,
@@ -404,7 +405,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
                             }
                         // skip tag selection if there's no tags to select
                         if (nids.isEmpty()) {
-                            launchCustomStudy(contextMenuOption, n)
+                            launchCustomStudy(contextMenuOption, n, viewModel.selectedKind)
                             return@launchCatchingTask
                         }
                         if (isAdded) {
@@ -420,16 +421,59 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
                 }
                 launchCustomStudy(contextMenuOption, n)
             }
+            if (contextMenuOption == STUDY_AHEAD) {
+                // the stored default may match no cards
+                searchJob = launchCatchingTask { updateCreateButtonState(dialog, userInputValue) }
+            }
         }
 
         binding.detailsEditText2.doAfterTextChanged {
-            dialog.positiveButton.isEnabled = userInputValue != null && userInputValue != 0
+            val value = userInputValue
+            if (contextMenuOption != STUDY_AHEAD) {
+                dialog.positiveButton.isEnabled = value != null && value != 0
+                return@doAfterTextChanged
+            }
+            value?.let { setSuffixText(it) }
+            searchJob?.cancel()
+            searchJob = launchCatchingTask { updateCreateButtonState(dialog, value) }
         }
 
         // Show soft keyboard
         dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         return dialog
     }
+
+    /** Sets the suffix of the days input: `[1] day`, `[3] days` */
+    private fun setSuffixText(days: Int) {
+        binding.detailsEditText2Layout.suffixText = resources.getQuantityString(R.plurals.set_due_date_label_suffix, days)
+    }
+
+    /** Enables 'Create' only if some cards would be reviewed ahead by [days] */
+    private suspend fun updateCreateButtonState(
+        dialog: AlertDialog,
+        days: Int?,
+    ) {
+        if (days == null || days == 0) {
+            binding.detailsEditText2Layout.error = if (days == 0) getString(R.string.minimum_value_is, 1) else null
+            dialog.positiveButton.isEnabled = false
+            return
+        }
+        val hasCards = hasCardsDueWithin(days)
+        binding.detailsEditText2Layout.error = if (hasCards) null else TR.customStudyNoCardsMatchedTheCriteriaYou()
+        dialog.positiveButton.isEnabled = hasCards
+    }
+
+    /** Whether the deck has cards due in the next [days] days, as 'review ahead' would select them */
+    private suspend fun hasCardsDueWithin(days: Int): Boolean =
+        withCol {
+            val search =
+                listOf(
+                    SearchNode.newBuilder().setDeck(decks.name(viewModel.deckId)).build(),
+                    // prop:due<=days
+                    SearchNode.newBuilder().setDueInDays(days).build(),
+                )
+            findCards(buildSearchString(search)).isNotEmpty()
+        }
 
     // TODO cram kind and the included/excluded tags lists are only relevant for STUDY_TAGS and
     //  should be included in the option to not leak in the method's api
@@ -471,7 +515,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
                 STUDY_FORGOT, STUDY_AHEAD, STUDY_PREVIEW, STUDY_TAGS -> CustomStudyAction.CUSTOM_STUDY_SESSION
             }
 
-        setFragmentResult(CustomStudyAction.REQUEST_KEY, bundleOf(CustomStudyAction.BUNDLE_KEY to action.ordinal))
+        setFragmentResult(CustomStudyAction.REQUEST_KEY, Bundle().apply { putInt(CustomStudyAction.BUNDLE_KEY, action.ordinal) })
 
         // save the default values (not in upstream)
         when (contextMenuOption) {
@@ -525,7 +569,7 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
                 EXTEND_NEW -> res.getString(R.string.custom_study_new_extend)
                 EXTEND_REV -> res.getString(R.string.custom_study_rev_extend)
                 STUDY_FORGOT -> res.getString(R.string.custom_study_forgotten)
-                STUDY_AHEAD -> res.getString(R.string.custom_study_ahead)
+                STUDY_AHEAD -> res.getString(R.string.custom_study_ahead_description)
                 STUDY_PREVIEW -> res.getString(R.string.custom_study_preview)
                 STUDY_TAGS -> res.getString(R.string.custom_study_tags)
                 null -> ""
@@ -751,9 +795,9 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
         fun createInstance(deckId: DeckId): CustomStudyDialog =
             CustomStudyDialog().apply {
                 arguments =
-                    bundleOfNotNull(
-                        CustomStudyViewModel.KEY_DID to deckId,
-                    )
+                    Bundle().apply {
+                        putLong(CustomStudyViewModel.KEY_DID, deckId)
+                    }
             }
 
         /**
@@ -768,10 +812,10 @@ class CustomStudyDialog : AnalyticsDialogFragment() {
         ): CustomStudyDialog =
             CustomStudyDialog().apply {
                 arguments =
-                    bundleOfNotNull(
-                        CustomStudyViewModel.KEY_DID to deckId,
-                        ARG_SUB_DIALOG_ID to contextMenuAttribute.ordinal,
-                    )
+                    Bundle().apply {
+                        putLong(CustomStudyViewModel.KEY_DID, deckId)
+                        putInt(ARG_SUB_DIALOG_ID, contextMenuAttribute.ordinal)
+                    }
             }
 
         /**

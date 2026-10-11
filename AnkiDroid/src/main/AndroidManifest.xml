@@ -1,23 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-~ Copyright (c) 2009 Andrew <andrewdubya@gmail>
-~ Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
-~ Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
-~ Copyright (c) 2009 Casey Link <unnamedrambler@gmail.com>
-~ Copyright (c) 2011 Norbert Nagold <norbert.nagold@gmail.com>
-~
-~ This program is free software; you can redistribute it and/or modify it under
-~ the terms of the GNU General Public License as published by the Free Software
-~ Foundation; either version 3 of the License, or (at your option) any later
-~ version.
-~
-~ This program is distributed in the hope that it will be useful, but WITHOUT ANY
-~ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-~ PARTICULAR PURPOSE. See the GNU General Public License for more details.
-~
-~ You should have received a copy of the GNU General Public License along with
-~ this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+  ~ SPDX-License-Identifier: GPL-3.0-or-later
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Andrew <andrewdubya@gmail>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Nicolas Raoul <nicolas.raoul@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Edu Zamora <edu.zasu@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2009 Casey Link <unnamedrambler@gmail.com>
+  ~ SPDX-FileCopyrightText: Copyright (c) 2011 Norbert Nagold <norbert.nagold@gmail.com>
+  -->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="auto">
@@ -41,6 +31,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Necessary for recording audio in a WebView -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.GET_PACKAGE_SIZE" android:maxSdkVersion="25" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -49,6 +41,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Disabled on Play Store -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <permission android:name="${applicationId}.permission.READ_WRITE_DATABASE"
                 android:label="@string/read_write_permission_label"
                 android:description="@string/read_write_permission_description"
@@ -306,7 +299,7 @@
         <activity
             android:name="com.ichi2.anki.StudyOptionsActivity"
             android:exported="false"
-            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:configChanges="keyboardHidden|screenSize"
             android:parentActivityName=".DeckPicker"
             >
         </activity>
@@ -329,17 +322,22 @@
             android:name="com.ichi2.anki.CardBrowser"
             android:label="@string/card_browser"
             android:theme="@style/Theme_Dark.Launcher"
-            android:exported="true"
+            android:exported="false"
             android:parentActivityName=".DeckPicker"
-            >
-            <intent-filter android:label="@string/card_browser">
+            />
+        <!-- `anki://x-callback-url/browser` deep link. -->
+        <activity-alias
+            android:name="com.ichi2.anki.CardBrowserDeepLink"
+            android:label="@string/card_browser"
+            android:targetActivity="com.ichi2.anki.IntentHandler"
+            android:exported="true">
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "anki://x-callback-url/browser” -->
                 <data android:scheme="anki" android:host="x-callback-url" android:path="/browser"/>
             </intent-filter>
-        </activity>
+        </activity-alias>
         <activity
             android:name=".notetype.ManageNotetypes"
             android:label="@string/model_browser_label"
@@ -488,19 +486,16 @@
         </activity>
         <activity
             android:name=".CardTemplateBrowserAppearanceEditor"
-            android:label="@string/card_template_browser_appearance_title"
             android:exported="false"
             android:configChanges="keyboardHidden|orientation|screenSize"
             />
         <activity
-            android:name=".SharedDecksActivity"
+            android:name=".shareddeck.SharedDecksActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
-            android:label="@string/download_deck"
-            android:theme="@style/Theme.MaterialComponents.NoActionBar" />
+            android:label="@string/download_deck" />
 
         <activity android:name=".IntroductionActivity"
             android:exported="false"
-            android:theme="@style/Theme.AppCompat.NoActionBar"
             android:configChanges="keyboardHidden|screenSize" />
 
         <service
@@ -535,6 +530,11 @@
                 android:resource="@xml/widget_provider_small"
                 />
         </receiver>
+
+        <!-- Copy Sync Error Message to Clipboard -->
+        <receiver
+            android:name="com.ichi2.anki.receiver.CopyToClipboardReceiver"
+            android:exported="false" />
 
         <!-- "Add Note" widget -->
         <receiver
@@ -644,7 +644,7 @@
             android:exported="false"
             />
         <receiver
-            android:name=".services.AlarmManagerService"
+            android:name=".services.SnoozeService"
             android:enabled="true"
             android:exported="false"
             />

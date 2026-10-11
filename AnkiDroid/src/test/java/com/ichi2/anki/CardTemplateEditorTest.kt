@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2020 Mike Hardy <mike@mikehardy.net>
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- * PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: Copyright (c) 2020 Mike Hardy <mike@mikehardy.net>
 
 package com.ichi2.anki
 
@@ -21,11 +8,14 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
 import android.os.Looper
+import android.view.KeyEvent
 import android.view.View
 import android.widget.EditText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.ichi2.anki.CardTemplateEditor.CardTemplateFragment
 import com.ichi2.anki.CardTemplateEditor.CardTemplateFragment.CardTemplate
 import com.ichi2.anki.CollectionManager.withCol
+import com.ichi2.anki.common.utils.ext.deepClonedInto
 import com.ichi2.anki.dialogs.InsertFieldDialog
 import com.ichi2.anki.libanki.CardOrdinal
 import com.ichi2.anki.libanki.NotetypeJson
@@ -36,7 +26,9 @@ import com.ichi2.anki.previewer.CardViewerActivity
 import com.ichi2.anki.previewer.TemplatePreviewerFragment
 import com.ichi2.anki.scheduling.selectTab
 import com.ichi2.testutils.assertFalse
+import com.ichi2.testutils.dispatchInsets
 import com.ichi2.testutils.withSplitPaneUi
+import com.ichi2.utils.dp
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.MatcherAssert
 import org.hamcrest.MatcherAssert.assertThat
@@ -57,6 +49,33 @@ import kotlin.test.junit5.JUnit5Asserter.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class CardTemplateEditorTest : RobolectricTest() {
+    @Test
+    fun `change detection does not serialize the note type - Issue 21912`() {
+        val original = col.notetypes.basic
+        val edited =
+            NotetypeJson(
+                original.jsonObject.deepClonedInto(
+                    object : JSONObject() {
+                        override fun toString(): String = error("Change detection must not serialize the whole note type")
+                    },
+                ),
+            )
+        val intent = CardEditor(ntid = original.id).toIntent(targetContext)
+        val controller = Robolectric.buildActivity(CardTemplateEditor::class.java, intent)
+        saveControllerForCleanup(controller)
+        // Guard the note type before onCreate: the initial Back callback update triggers the crash.
+        controller.get().tempNoteType = CardTemplateNotetype(edited)
+        controller.setup()
+
+        with(controller.get()) {
+            assertFalse("Opening the editor should not mark the note type as changed", noteTypeHasChanged())
+            edited.templates[0].qfmt += "edited"
+            assertTrue("A nested template edit should be detected", noteTypeHasChanged())
+            edited.templates[0].qfmt = original.templates[0].qfmt
+            assertFalse("Reverting the edit should clear the change", noteTypeHasChanged())
+        }
+    }
+
     @Test
     @Throws(Exception::class)
     fun testEditTemplateContents() {
@@ -485,6 +504,7 @@ class CardTemplateEditorTest : RobolectricTest() {
                     .start()
                     .resume()
                     .visible()
+            saveControllerForCleanup(templateEditorController)
             testEditor = templateEditorController.get()
             shadowTestEditor = shadowOf(testEditor)
             assertFalse("Note type should not have changed yet", testEditor.noteTypeHasChanged())
@@ -693,6 +713,169 @@ class CardTemplateEditorTest : RobolectricTest() {
         editor.onDeckSelected(null)
         MatcherAssert.assertThat("Deck ID element should exist", template!!.jsonObject.has("did"), Matchers.equalTo(true))
         MatcherAssert.assertThat("Deck ID element should be null", template.jsonObject["did"], Matchers.equalTo(JSONObject.NULL))
+    }
+
+    @Test
+    fun `editing with the keyboard open leaves Back to the IME - Issue 21807`() {
+        withCardTemplateEditor {
+            dispatchInsets(imeBottom = 240.dp)
+            editText.text.append("edited")
+
+            assertTrue("The template has unsaved changes", noteTypeHasChanged())
+            assertFalse("Back should dismiss the keyboard", onBackPressedDispatcher.hasEnabledCallbacks())
+
+            dispatchInsets()
+            onBackPressedDispatcher.onBackPressed()
+            assertEquals("Back should now confirm discarding edits", "Discard changes?", getAlertDialogText(true))
+            assertFalse("Edits must not be discarded without confirmation", isFinishing)
+        }
+    }
+
+    @Test
+    fun `opening the keyboard after editing leaves Back to the IME - Issue 21807`() {
+        withCardTemplateEditor {
+            editText.text.append("edited")
+            assertTrue("Back should confirm discarding edits", onBackPressedDispatcher.hasEnabledCallbacks())
+
+            dispatchInsets(imeBottom = 240.dp)
+
+            assertFalse("Back should dismiss the keyboard", onBackPressedDispatcher.hasEnabledCallbacks())
+        }
+    }
+
+    /**
+     * Guards the fix for 21807: a physical keyboard reports a visible IME, but does not hide the
+     * tabs, and 'back' does not dismiss it.
+     *
+     * @see CardTemplateEditorScreenshotTest.PhysicalKeyboardIme
+     */
+    @Test
+    fun `back confirms discarding edits with a physical keyboard`() {
+        fun CardTemplateEditor.assertBackConfirmsDiscardingEdits() {
+            editText.text.append("edited")
+
+            assertTrue("Back should confirm discarding edits", onBackPressedDispatcher.hasEnabledCallbacks())
+            onBackPressedDispatcher.onBackPressed()
+
+            assertEquals("Back should confirm discarding edits", "Discard changes?", getAlertDialogText(true))
+            assertFalse("Edits must not be discarded without confirmation", isFinishing)
+            // dismiss: the next case would otherwise assert against this dialog if it showed none
+            clickAlertDialogButton(DialogInterface.BUTTON_NEGATIVE, false)
+        }
+
+        // 3-button navigation reports a visible IME with no height
+        withCardTemplateEditor {
+            dispatchInsets(navBarRight = 48.dp, imeVisible = true)
+            assertBackConfirmsDiscardingEdits()
+        }
+
+        // gesture navigation shows only a 48dp strip
+        withCardTemplateEditor {
+            dispatchInsets(navBarBottom = 24.dp, imeBottom = 48.dp)
+            assertBackConfirmsDiscardingEdits()
+        }
+    }
+
+    /**
+     * 'back' is driven by the selected page's tabs, so it must still follow the keyboard once
+     * the pager moves to another card.
+     */
+    @Test
+    fun `Back follows the keyboard after selecting another card - Issue 21807`() {
+        withCardTemplateEditor(col.notetypes.basicAndReversed) {
+            editText.text.append("edited")
+            selectTab(1)
+            advanceRobolectricLooper()
+
+            dispatchInsets(imeBottom = 240.dp)
+            assertFalse("Back should dismiss the keyboard", onBackPressedDispatcher.hasEnabledCallbacks())
+
+            dispatchInsets()
+            assertTrue("Back should confirm discarding edits", onBackPressedDispatcher.hasEnabledCallbacks())
+        }
+    }
+
+    /** Deleting a card type recreates the pages with new adapter IDs. */
+    @Test
+    fun `Back follows the keyboard after deleting a card type - Issue 21807`() {
+        withCardTemplateEditor(col.notetypes.basicAndReversed) {
+            assertTrue("Unable to delete the card type", shadowOf(this).clickMenuItem(R.id.action_delete))
+            advanceRobolectricLooper()
+            clickAlertDialogButton(DialogInterface.BUTTON_POSITIVE, true)
+            advanceRobolectricLooper()
+            assertEquals("One card type should remain", 1, tempNoteType!!.templateCount)
+            assertTrue("The deletion is unsaved", noteTypeHasChanged())
+
+            dispatchInsets(imeBottom = 240.dp)
+            assertEquals("The keyboard should hide the tabs", View.GONE, findViewById<View>(R.id.bottom_navigation).visibility)
+            assertFalse("Back should dismiss the keyboard", onBackPressedDispatcher.hasEnabledCallbacks())
+
+            dispatchInsets()
+            onBackPressedDispatcher.onBackPressed()
+            assertEquals("Back should now confirm discarding the deletion", "Discard changes?", getAlertDialogText(true))
+            assertFalse("The deletion must not be discarded without confirmation", isFinishing)
+        }
+    }
+
+    @Test
+    fun `Ctrl+2 switches to the back template after deleting a card type`() {
+        withCardTemplateEditor(col.notetypes.basicAndReversed) {
+            assertTrue("Unable to delete the card type", shadowOf(this).clickMenuItem(R.id.action_delete))
+            advanceRobolectricLooper()
+            clickAlertDialogButton(DialogInterface.BUTTON_POSITIVE, true)
+            advanceRobolectricLooper()
+            assertEquals("One card type should remain", 1, tempNoteType!!.templateCount)
+
+            val template = tempNoteType!!.getTemplate(0)
+            assertEquals("The front template should be selected initially", template.qfmt, editText.text.toString())
+
+            onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0, KeyEvent.META_CTRL_ON))
+
+            assertEquals("Ctrl+2 should show the back template", template.afmt, editText.text.toString())
+        }
+    }
+
+    /** The tabs live in the fragment, which is present in both layouts */
+    @Test
+    fun `editing with the keyboard open leaves Back to the IME - tablet ui - Issue 21807`() =
+        withSplitPaneUi {
+            withCardTemplateEditor(col.notetypes.basicAndReversed) {
+                editText.text.append("edited")
+                assertTrue("Back should confirm discarding edits", onBackPressedDispatcher.hasEnabledCallbacks())
+
+                dispatchInsets(imeBottom = 240.dp)
+
+                assertFalse("Back should dismiss the keyboard", onBackPressedDispatcher.hasEnabledCallbacks())
+            }
+        }
+
+    @Test
+    fun `toolbar navigation still confirms discarding edits with the keyboard open`() {
+        withCardTemplateEditor {
+            dispatchInsets(imeBottom = 240.dp)
+            editText.text.append("edited")
+
+            assertTrue("Unable to click?", shadowOf(this).clickMenuItem(android.R.id.home))
+
+            assertEquals("The toolbar should confirm discarding edits", "Discard changes?", getAlertDialogText(true))
+            assertFalse("Edits must not be discarded without confirmation", isFinishing)
+        }
+    }
+
+    @Test
+    fun `closing the keyboard after reverting edits allows Back to exit`() {
+        withCardTemplateEditor {
+            val original = editText.text.toString()
+            dispatchInsets(imeBottom = 240.dp)
+            editText.text.append("edited")
+            editText.setText(original)
+
+            dispatchInsets()
+            assertFalse("No discard confirmation is needed", onBackPressedDispatcher.hasEnabledCallbacks())
+            onBackPressedDispatcher.onBackPressed()
+
+            assertTrue("Back should close the unchanged editor", isFinishing)
+        }
     }
 
     @Test
@@ -941,6 +1124,24 @@ class CardTemplateEditorTest : RobolectricTest() {
                 assertThat(previewer.ord, equalTo(1))
             }
         }
+
+    @Test
+    fun `the current card is focused`() {
+        withCardTemplateEditor(noteType = getCurrentDatabaseNoteTypeCopy("Basic (and reversed card)")) {
+            advanceRobolectricLooper()
+            assertThat("card 1 is focused on open", window.decorView.findFocus(), equalTo(templateFragment(0).binding.editText))
+
+            selectTab(1)
+            advanceRobolectricLooper()
+            assertThat("card 2 is focused once selected", window.decorView.findFocus(), equalTo(templateFragment(1).binding.editText))
+
+            selectTab(0)
+            advanceRobolectricLooper()
+            assertThat("card 1 is focused again", window.decorView.findFocus(), equalTo(templateFragment(0).binding.editText))
+        }
+    }
+
+    private fun CardTemplateEditor.templateFragment(ord: Int) = supportFragmentManager.findFragmentByTag("f$ord") as CardTemplateFragment
 
     private fun addCardType(
         testEditor: CardTemplateEditor,

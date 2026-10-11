@@ -1,18 +1,5 @@
-/*
- *  Copyright (c) 2022 Brayan Oliveira <brayandso.dev@gmail.com>
- *
- *  This program is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free Software
- *  Foundation; either version 3 of the License, or (at your option) any later
- *  version.
- *
- *  This program is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
- *  PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along with
- *  this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 package com.ichi2.anki.preferences
 
 import android.content.ActivityNotFoundException
@@ -24,17 +11,19 @@ import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.SwitchPreferenceCompat
 import com.ichi2.anki.CollectionManager
+import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.R
+import com.ichi2.anki.common.utils.android.showThemedToast
+import com.ichi2.anki.common.utils.android.systemIsInNightMode
 import com.ichi2.anki.deckpicker.BackgroundImage
 import com.ichi2.anki.deckpicker.BackgroundImage.FileSizeResult
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.settings.enums.AppTheme
-import com.ichi2.anki.showThemedToast
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.utils.CollectionPreferences
 import com.ichi2.themes.Themes
-import com.ichi2.themes.Themes.systemIsInNightMode
 import com.ichi2.themes.Themes.updateCurrentTheme
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
@@ -51,8 +40,11 @@ class AppearanceSettingsFragment : SettingsFragment() {
         get() = "prefs.appearance"
 
     override fun initSubscreen() {
+        preferenceScreen.title = TR.preferencesAppearance()
+
         // Configure background
         backgroundImage = requirePreference<Preference>("deckPickerBackground")
+        backgroundImage!!.title = TR.sentenceCase.selectImage
         removeBackgroundPref = requirePreference<Preference>("removeWallPaper")
         backgroundImage!!.onPreferenceClickListener =
             Preference.OnPreferenceClickListener {
@@ -130,6 +122,9 @@ class AppearanceSettingsFragment : SettingsFragment() {
         val dayThemePref = requirePreference<ListPreference>(R.string.day_theme_key)
         val nightThemePref = requirePreference<ListPreference>(R.string.night_theme_key)
 
+        dayThemePref.isEnabled = appTheme != AppTheme.NIGHT
+        nightThemePref.isEnabled = appTheme != AppTheme.DAY
+
         // Remove follow system options in android versions which do not have system dark mode
         // When minSdk reaches 29, the only necessary change is to remove this if-block
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -149,6 +144,9 @@ class AppearanceSettingsFragment : SettingsFragment() {
 
                 if (previousThemeId != Themes.currentTheme.styleResId) {
                     ActivityCompat.recreate(requireActivity())
+                } else {
+                    dayThemePref.isEnabled = newValue != getString(AppTheme.NIGHT.entryResId)
+                    nightThemePref.isEnabled = newValue != getString(AppTheme.DAY.entryResId)
                 }
             }
         }
