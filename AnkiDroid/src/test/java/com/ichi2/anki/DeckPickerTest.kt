@@ -4,6 +4,7 @@ package com.ichi2.anki
 
 import android.Manifest.permission.INTERNET
 import android.annotation.SuppressLint
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -40,11 +41,13 @@ import com.ichi2.anki.common.utils.annotation.KotlinCleanup
 import com.ichi2.anki.common.utils.ext.getParcelableExtraCompat
 import com.ichi2.anki.databinding.ActivityHomescreenBinding
 import com.ichi2.anki.deckpicker.DeckPickerViewModel
+import com.ichi2.anki.deckpicker.SyncIconState
 import com.ichi2.anki.dialogs.DatabaseErrorDialog
 import com.ichi2.anki.dialogs.DatabaseErrorDialog.DatabaseErrorDialogType
 import com.ichi2.anki.dialogs.DeckPickerContextMenu.DeckPickerContextMenuOption
 import com.ichi2.anki.dialogs.DeckPickerContextMenuResult
 import com.ichi2.anki.dialogs.DeckSelectionDialog
+import com.ichi2.anki.dialogs.SyncErrorDialog
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResult
 import com.ichi2.anki.dialogs.utils.input
 import com.ichi2.anki.dialogs.utils.performPositiveClick
@@ -53,6 +56,7 @@ import com.ichi2.anki.libanki.DeckId
 import com.ichi2.anki.model.SelectableDeck
 import com.ichi2.anki.navigation.AnkiDroidNavigator
 import com.ichi2.anki.observability.ChangeManager
+import com.ichi2.anki.reviewreminders.ScheduleRemindersFragment
 import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.ui.RecyclerFastScroller
@@ -106,7 +110,9 @@ import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowLooper
 import timber.log.Timber
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 
@@ -669,16 +675,95 @@ class DeckPickerTest : RobolectricTest() {
         addBasicNote()
 
         deckPicker {
-            val initialState = assertNotNull(fragment).viewModel.state
+            val studyOptions = assertNotNull(fragment)
+            val initialState = studyOptions.viewModel.state
             assertEquals(1, initialState.dataOrNull()?.numberOfCardsInDeck)
 
             addBasicNote()
-            viewModel.reloadDeckCounts().join()
-            advanceRobolectricLooper()
+            reloadDecks()
 
+            assertSame(studyOptions, fragment)
             val updatedState = assertNotNull(fragment).viewModel.state
             assertEquals(2, updatedState.dataOrNull()?.numberOfCardsInDeck)
         }
+    }
+
+    @Test
+    fun `deck reload preserves reminder panel and its dialog`() =
+        withReminderPanel { reminders ->
+            val dialog = showSyncConflict()
+
+            reloadDecks()
+
+            assertSame(reminders, sidePanel)
+            assertTrue(dialog.isShowing)
+        }
+
+    @Test
+    fun `cancelling sync conflict after reload returns to reminders`() =
+        withReminderPanel { reminders ->
+            val dialog = showSyncConflict()
+            reloadDecks()
+
+            dialog.getButton(DialogInterface.BUTTON_NEUTRAL).performClick()
+            advanceRobolectricLooper()
+
+            assertFalse(dialog.isShowing)
+            assertSame(reminders, sidePanel)
+        }
+
+    @Test
+    fun `reminder toolbar returns to study options after reload`() =
+        withReminderPanel { reminders ->
+            reloadDecks()
+
+            reminders.navigateUp()
+
+            assertNotNull(fragment)
+            assertEquals(0, supportFragmentManager.backStackEntryCount)
+        }
+
+    @Test
+    fun `selecting another deck closes reminders and clears pane navigation history`() =
+        withReminderPanel {
+            val anotherDeck = addDeck("Another Deck")
+
+            viewModel.selectDeck(anotherDeck).join()
+            advanceRobolectricLooper()
+
+            assertEquals(anotherDeck, assertNotNull(fragment).viewModel.selectedDeckId)
+            assertEquals(0, supportFragmentManager.backStackEntryCount)
+        }
+
+    private fun withReminderPanel(test: suspend DeckPicker.(ScheduleRemindersFragment) -> Unit) {
+        assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
+        addBasicNote()
+        Prefs.newReviewRemindersEnabled = true
+        deckPicker {
+            selectContextMenuOption(ContextMenuOption.SCHEDULE_REMINDERS, getColUnsafe.decks.selected())
+            advanceRobolectricLooper()
+            test(requireNotNull(sidePanel as? ScheduleRemindersFragment))
+        }
+    }
+
+    private val DeckPicker.sidePanel
+        get() = supportFragmentManager.findFragmentById(R.id.studyoptions_fragment)
+
+    private suspend fun DeckPicker.reloadDecks() {
+        viewModel.reloadDeckCounts().join()
+        advanceRobolectricLooper()
+    }
+
+    private fun DeckPicker.showSyncConflict(): AlertDialog {
+        showSyncErrorDialog(SyncErrorDialog.Type.DIALOG_SYNC_CONFLICT_RESOLUTION)
+        advanceRobolectricLooper()
+        return ShadowDialog.getLatestDialog() as AlertDialog
+    }
+
+    private fun ScheduleRemindersFragment.navigateUp() {
+        val toolbar = requireView().findViewById<Toolbar>(R.id.non_collapsible_toolbar)
+        toolbar.children.first { it.contentDescription == toolbar.navigationContentDescription }.performClick()
+        advanceRobolectricLooper()
     }
 
     @Test
@@ -719,7 +804,9 @@ class DeckPickerTest : RobolectricTest() {
     fun `restored study options fragment is pruned when recreated into single pane`() {
         assumeTrue("We are running on a tablet", qualifiers!!.contains("xlarge"))
         ActivityScenario.launch(DeckPicker::class.java).use { scenario ->
-            advanceRobolectricLooper()
+            lateinit var viewModel: DeckPickerViewModel
+            scenario.onActivity { viewModel = it.viewModel }
+            viewModel.awaitStartup()
             scenario.onActivity { deckPicker ->
                 assertThat(
                     "side panel fragment should be displayed on tablet",
@@ -1160,6 +1247,43 @@ class DeckPickerTest : RobolectricTest() {
             )
         }
 
+    @Test
+    fun `fatal error arriving after menu creation blanks the options menu`() =
+        deckPickerEx {
+            assertThat("menu was built normally on startup", lastCreateOptionsMenuResult, equalTo(true))
+
+            // a slow startup check delivers a fatal error once the menu already exists
+            viewModel.flowOfStartupResponse.value =
+                DeckPickerViewModel.StartupResponse.FatalError(InitialActivity.StartupFailure.DatabaseLocked)
+            advanceRobolectricLooper()
+            advanceRobolectricLooper()
+
+            assertThat("the failure was handled", databaseErrorDialog, equalTo(DatabaseErrorDialogType.DIALOG_DB_LOCKED))
+            assertThat("the menu is rebuilt and blanked", lastCreateOptionsMenuResult, equalTo(false))
+        }
+
+    @Test
+    fun `success arriving after menu creation refreshes the options menu`() =
+        deckPickerEx {
+            CollectionManager.closeCollectionBlocking()
+            invalidateOptionsMenu()
+            advanceRobolectricLooper()
+            createMenuJob?.join()
+            assertThat("menu built while the collection was closed", viewModel.optionsMenuState, nullValue())
+
+            CollectionManager.getColUnsafe()
+            viewModel.flowOfStartupResponse.value = DeckPickerViewModel.StartupResponse.Success
+            advanceRobolectricLooper()
+            advanceRobolectricLooper()
+            createMenuJob?.join()
+
+            assertThat(
+                "the menu is rebuilt once startup succeeds",
+                viewModel.optionsMenuState?.syncIcon,
+                equalTo(SyncIconState.NotLoggedIn),
+            )
+        }
+
     /** Regression test for [#20712](https://github.com/ankidroid/Anki-Android/issues/20712) */
     @Test
     fun `SQLiteDatabaseCorruptException in runCatching shows database error dialog`() =
@@ -1231,6 +1355,11 @@ class DeckPickerTest : RobolectricTest() {
         var databaseErrorDialog: DatabaseErrorDialogType? = null
         var displayedAnalyticsOptIn = false
         var optionsMenu: Menu? = null
+
+        /** result of the last [onCreateOptionsMenu] call: false means the menu was blanked */
+        var lastCreateOptionsMenuResult: Boolean? = null
+
+        override fun onCreateOptionsMenu(menu: Menu): Boolean = super.onCreateOptionsMenu(menu).also { lastCreateOptionsMenuResult = it }
 
         override fun showDatabaseErrorDialog(
             errorDialogType: DatabaseErrorDialogType,

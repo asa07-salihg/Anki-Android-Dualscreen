@@ -309,15 +309,22 @@ abstract class CardViewerFragment(
                         Timber.w("URL blocked")
                         return true
                     }
-                    if (!appPermission.checkCanLaunchExternalApps()) {
+                    val intent = appPermission.createUrlIntent(url)
+                    if (intent == null) {
                         Timber.w("URL blocked: canLaunchExternalApps")
                         return true
                     }
                     try {
-                        openUrl(url)
-                    } catch (_: Throwable) {
-                        Timber.w("Could not open url")
-                        return false
+                        if (intent.hasCategory(Intent.CATEGORY_BROWSABLE)) {
+                            startActivity(intent)
+                        } else {
+                            // Preserve the existing browser check for custom schemes.
+                            openUrl(url)
+                        }
+                    } catch (e: Exception) {
+                        Timber.w(e, "Could not open url")
+                        showSnackbar(R.string.activity_start_failed)
+                        // Consume failed launches: external pages must not load inside the card.
                     }
                 }
             }
